@@ -47,9 +47,8 @@ export default function App() {
       </header>
 
       <p className="lede">
-        A clerk checks an incoming invoice. Invalid invoices loop through a clarification request.
-        Valid ones split on amount: up to 1,000 PLN is approved automatically, and anything higher
-        waits for a manager. The invoice is then archived.
+        Clerk validation → amount split (auto ≤ 1,000 PLN / manager above) → archive. Invalid
+        invoices loop through clarification.
       </p>
 
       {diagram.importError && (
