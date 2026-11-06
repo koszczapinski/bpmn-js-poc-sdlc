@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { flowNodeLabel } from '../domain/typeLabels'
 import type { SelectedElement } from '../adapters/bpmnEditor'
 
@@ -38,12 +38,10 @@ function NameField({
   onRename: (id: string, name: string) => void
 }) {
   const [draft, setDraft] = useState(element.name)
-  const committed = useRef(element.name)
 
   function commit() {
     const next = draft.trim()
-    if (next === committed.current) return
-    committed.current = next
+    if (next === element.name) return
     onRename(element.id, next)
   }
 
@@ -59,7 +57,7 @@ function NameField({
           if (event.key === 'Enter') event.currentTarget.blur()
         }}
       />
-      <span className="hint">Written into the BPMN model when you leave the field.</span>
+      <span className="hint">Applied to the BPMN element when you leave the field.</span>
     </label>
   )
 }

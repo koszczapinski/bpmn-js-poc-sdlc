@@ -18,6 +18,7 @@ export interface BpmnEditor {
   importXml(xml: string): Promise<{ warnings: string[] }>
   saveXml(): Promise<string>
   onSelectionChanged(handler: (element: SelectedElement | null) => void): () => void
+  onModelChanged(handler: () => void): () => void
   updateName(id: string, name: string): void
   focus(id: string): boolean
   clearFocus(): void
@@ -43,6 +44,10 @@ class BpmnJsEditor implements BpmnEditor {
     this.handler?.(element)
   }
 
+  private readonly onCommandStackChanged = () => {
+    this.publishSelection()
+  }
+
   private readonly modeler: BpmnModeler
   private handler: ((element: SelectedElement | null) => void) | null = null
   private selectedId: string | null = null
@@ -54,12 +59,14 @@ class BpmnJsEditor implements BpmnEditor {
 
   async importXml(xml: string): Promise<{ warnings: string[] }> {
     const result = await this.modeler.importXML(xml)
+    this.publishSelection()
     return { warnings: (result.warnings ?? []).map(warningText) }
   }
 
   async saveXml(): Promise<string> {
     const result = await this.modeler.saveXML({ format: true })
     if (!result.xml) throw new Error('The modeler did not return BPMN XML.')
+    this.publishSelection()
     return result.xml
   }
 
@@ -70,11 +77,19 @@ class BpmnJsEditor implements BpmnEditor {
     }
     this.modeler.on('selection.changed', this.onSelection)
     this.modeler.on('element.changed', this.onElementChanged)
+    this.modeler.on('commandStack.changed', this.onCommandStackChanged)
     return () => {
       this.modeler.off('selection.changed', this.onSelection)
       this.modeler.off('element.changed', this.onElementChanged)
+      this.modeler.off('commandStack.changed', this.onCommandStackChanged)
       this.handler = null
     }
+  }
+
+  onModelChanged(handler: () => void): () => void {
+    const listener = () => handler()
+    this.modeler.on('commandStack.changed', listener)
+    return () => this.modeler.off('commandStack.changed', listener)
   }
 
   updateName(id: string, name: string): void {
@@ -142,6 +157,12 @@ class BpmnJsEditor implements BpmnEditor {
 
   private modeling(): Modeling {
     return this.modeler.get<Modeling>('modeling')
+  }
+
+  private publishSelection(): void {
+    if (!this.handler) return
+    const selected = this.selection().get()
+    this.handler(readElement(selected[0]))
   }
 }
 

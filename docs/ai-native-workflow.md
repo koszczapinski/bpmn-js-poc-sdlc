@@ -39,6 +39,7 @@ CI does not deploy and does not start a database or browser service.
 | AC-FLOW-2  | `src/App.test.tsx`                                            |
 | AC-FLOW-3  | `src/App.test.tsx`                                            |
 | AC-FLOW-4  | `src/App.test.tsx`                                            |
+| AC-STATE-1 | `src/App.test.tsx`                                            |
 | AC-VAL-1   | `src/domain/validateProcess.test.ts`                          |
 | AC-VAL-2   | `src/domain/validateProcess.test.ts`                          |
 | AC-VAL-3   | `src/domain/validateProcess.test.ts`                          |

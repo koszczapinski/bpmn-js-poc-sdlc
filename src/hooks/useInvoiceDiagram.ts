@@ -47,7 +47,14 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
 
     const editor = createBpmnEditor(container)
     editorRef.current = editor
-    const unsubscribe = editor.onSelectionChanged(setSelected)
+    const unsubscribeSelection = editor.onSelectionChanged(setSelected)
+    const unsubscribeModel = editor.onModelChanged(() => {
+      setValidation((current) =>
+        current.status === 'done' || current.status === 'error' ? { status: 'idle' } : current,
+      )
+      setActiveFindingId(null)
+      setFocusMessage(null)
+    })
     let cancelled = false
     const observer =
       typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => editor.resize())
@@ -70,7 +77,8 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     return () => {
       cancelled = true
       observer?.disconnect()
-      unsubscribe()
+      unsubscribeSelection()
+      unsubscribeModel()
       editor.destroy()
       if (editorRef.current === editor) editorRef.current = null
     }
@@ -127,7 +135,6 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
 
   function rename(id: string, name: string): void {
     editorRef.current?.updateName(id, name)
-    setSelected((current) => (current && current.id === id ? { ...current, name } : current))
   }
 
   function selectFinding(finding: Finding): void {

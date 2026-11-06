@@ -26,7 +26,10 @@ const { modelerState, MockModeler } = vi.hoisted(() => {
     })
     saveXML = vi.fn(async () => ({ xml: modelerState.saveXml ?? this.xml }))
     destroy = vi.fn()
-    selection = { select: vi.fn() }
+    selection = {
+      select: vi.fn(),
+      get: vi.fn(() => [] as unknown[]),
+    }
     canvas = {
       addMarker: vi.fn(),
       removeMarker: vi.fn(),
@@ -244,6 +247,19 @@ describe('App', () => {
       })
     })
     expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('Po poprawce')
+  })
+
+  it('AC-STATE-1: a model edit clears a previous validation result', async () => {
+    const { user, modeler } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'Validate' }))
+    expect(await screen.findByText('No structural issues in this subset.')).toBeInTheDocument()
+
+    act(() => {
+      modeler.emit('commandStack.changed', {})
+    })
+
+    expect(screen.getByText('Not checked yet.')).toBeInTheDocument()
+    expect(screen.queryByText('No structural issues in this subset.')).not.toBeInTheDocument()
   })
 
   it('AC-FLOW-4: downloads the XML currently returned by the modeler', async () => {

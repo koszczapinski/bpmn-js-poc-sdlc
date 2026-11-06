@@ -3,6 +3,8 @@
 This repository is a small BPMN.js proof of concept. Keep the change as small as the demo.
 
 - Validation in `src/domain` stays pure. Do not import React, bpmn-js, diagram-js, or the DOM from that folder.
+- The active bpmn-js modeler is the only diagram. React may store UI state only: the current selection snapshot, validation status and findings, and an in-progress name draft. Do not copy the BPMN model into React state, TanStack Query, or any other store. This demo has no server to synchronize, so those tools are not used.
+- Refresh that UI from modeler events after import, edit, and export: `selection.changed`, `element.changed`, and `commandStack.changed`. Read XML through the adapter only when validating or downloading.
 - Parse BPMN XML only in `src/adapters/parseBpmnXml.ts`. Talk to the bpmn-js modeler only in `src/adapters/bpmnEditor.ts`.
 - Do not describe the structural check as a BPMN 2.0 schema validator or an execution engine. The subset is specified in `docs/specs/invoice-approval-poc.md`.
 - Change behavior by updating that spec first, then a failing test, then the code. Keep the traceability table in `docs/ai-native-workflow.md` accurate.

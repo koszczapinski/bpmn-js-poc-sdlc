@@ -24,7 +24,9 @@ React UI
 - `src/domain` validates a plain process model. It does not import React, bpmn-js, or the DOM.
 - `src/adapters/parseBpmnXml.ts` is the only XML parser. It reads the first process and its direct children. Sequence flows define the graph via `sourceRef` and `targetRef`.
 - `src/adapters/bpmnEditor.ts` is the only module that constructs the bpmn-js modeler. The UI never calls bpmn-js itself. Styles load from the official bpmn-js CSS in `src/main.tsx`.
-- `src/bpmn/invoiceApproval.bpmn` is the bundled diagram.
+- `src/bpmn/invoiceApproval.bpmn` is the initial import only. After that, the modeler is the diagram.
+
+React keeps the selection snapshot, the validation result, and the name field while it is being typed. It does not keep a second copy of the process. Import, element edits, and export refresh the panel from `selection.changed`, `element.changed`, and `commandStack.changed`. Validate and download read XML from the modeler at that moment, then the pure checker runs on the parsed model. TanStack Query and a global store are not used: nothing here is fetched from a server or shared across pages.
 
 The modeler provides pan, zoom, selection, label editing, and delete. **Fit** calls `canvas.zoom('fit-viewport')`.
 
