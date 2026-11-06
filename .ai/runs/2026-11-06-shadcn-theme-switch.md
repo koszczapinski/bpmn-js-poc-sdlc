@@ -68,6 +68,8 @@ The interface is built on shadcn/ui components (Tailwind CSS), opens in the ligh
 
 ## Progress
 
+PR: #5
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Spec first
@@ -93,5 +95,5 @@ The interface is built on shadcn/ui components (Tailwind CSS), opens in the ligh
 
 ### Phase 6: Gate and browser check
 
-- [ ] 6.1 Run the full check
-- [ ] 6.2 Check light, dark, and the switch in a browser
+- [x] 6.1 Run the full check — 28947a8
+- [x] 6.2 Check light, dark, and the switch in a browser — 28947a8
