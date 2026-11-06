@@ -72,7 +72,7 @@ The interface is built on shadcn/ui components (Tailwind CSS), opens in the ligh
 
 ### Phase 1: Spec first
 
-- [ ] 1.1 Add AC-THEME criteria, the AGENTS.md phrase, and traceability rows
+- [x] 1.1 Add AC-THEME criteria, the AGENTS.md phrase, and traceability rows — fb5fb84
 
 ### Phase 2: Failing tests
 
