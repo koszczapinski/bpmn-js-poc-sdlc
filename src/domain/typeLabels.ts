@@ -1,4 +1,4 @@
-const TYPE_LABELS: Record<string, string> = {
+export const TYPE_LABELS = {
   startEvent: 'Start event',
   endEvent: 'End event',
   intermediateCatchEvent: 'Intermediate catch event',
@@ -23,10 +23,21 @@ const TYPE_LABELS: Record<string, string> = {
   eventBasedGateway: 'Event-based gateway',
   complexGateway: 'Complex gateway',
   sequenceFlow: 'Sequence flow',
+} as const satisfies Record<string, string>
+
+export type TypeName = keyof typeof TYPE_LABELS
+
+/** `bpmn:UserTask` and `userTask` both become `userTask`. */
+export function localTypeName(type: string): string {
+  const withoutPrefix = type.startsWith('bpmn:') ? type.slice('bpmn:'.length) : type
+  return withoutPrefix.charAt(0).toLowerCase() + withoutPrefix.slice(1)
+}
+
+export function isKnownType(local: string): local is TypeName {
+  return Object.hasOwn(TYPE_LABELS, local)
 }
 
 export function flowNodeLabel(type: string): string {
-  const withoutPrefix = type.startsWith('bpmn:') ? type.slice('bpmn:'.length) : type
-  const local = withoutPrefix.charAt(0).toLowerCase() + withoutPrefix.slice(1)
-  return TYPE_LABELS[local] ?? local
+  const local = localTypeName(type)
+  return isKnownType(local) ? TYPE_LABELS[local] : local
 }
