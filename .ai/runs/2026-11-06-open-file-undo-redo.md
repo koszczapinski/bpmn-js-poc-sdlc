@@ -65,8 +65,8 @@ A user can open a local `.bpmn` file that replaces the diagram in the modeler, a
 
 ### Phase 2: Undo and redo
 
-- [ ] 2.1 Add failing tests for undo and redo
-- [ ] 2.2 Implement undo and redo in the adapter, hook, and toolbar
+- [x] 2.1 Add failing tests for undo and redo — 12383f3
+- [x] 2.2 Implement undo and redo in the adapter, hook, and toolbar — 38789ef
 
 ### Phase 3: Open a local file
 
