@@ -108,7 +108,7 @@ function InvoiceApp() {
         </div>
       </header>
 
-      <p className="max-w-272 border-b bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
+      <p className="border-b bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
         {t('app.lede')}
       </p>
 

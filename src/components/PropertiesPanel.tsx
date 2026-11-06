@@ -14,7 +14,7 @@ export function PropertiesPanel({ element, onRename }: PropertiesPanelProps) {
   const { t, typeLabel } = useI18n()
   return (
     <section aria-labelledby="selection-heading">
-      <Card className="rounded-none border-0 border-b shadow-none">
+      <Card className="gap-3 rounded-none border-0 border-b py-4 shadow-none">
         <CardHeader>
           <CardTitle>
             <h2 id="selection-heading" className="text-base font-semibold tracking-tight">

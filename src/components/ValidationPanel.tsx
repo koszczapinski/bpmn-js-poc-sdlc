@@ -24,7 +24,7 @@ export function ValidationPanel({
   const { t, text, finding: findingText } = useI18n()
   return (
     <section aria-labelledby="validation-heading">
-      <Card className="rounded-none border-0 border-b shadow-none">
+      <Card className="gap-3 rounded-none border-0 border-b py-4 shadow-none">
         <CardHeader>
           <CardTitle>
             <h2 id="validation-heading" className="text-base font-semibold tracking-tight">
