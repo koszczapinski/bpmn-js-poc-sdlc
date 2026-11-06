@@ -92,6 +92,12 @@ describe('validateProcess', () => {
         elementId: 'Gateway_Thin',
         message:
           'Exclusive gateway "Decyzja" (Gateway_Thin) has 1 outgoing sequence flow; at least 2 are required.',
+        params: {
+          nodeType: 'exclusiveGateway',
+          nodeId: 'Gateway_Thin',
+          nodeName: 'Decyzja',
+          count: 1,
+        },
       },
     ])
 
@@ -134,5 +140,30 @@ describe('validateProcess', () => {
       ),
     )
     expect(findings).toEqual([])
+  })
+
+  it('AC-I18N-5: node findings carry the values their sentence is built from, process findings carry none', () => {
+    const lone: FlowNode = { id: 'Task_Lone', type: 'userTask', name: 'Lone step' }
+    const bare: FlowNode = { id: 'Task_Bare', type: 'serviceTask' }
+    const closed: FlowNode = { id: 'Gateway_Closed', type: 'exclusiveGateway' }
+    const findings = validateProcess(model([lone, bare, closed], []))
+    const byId = new Map(findings.map((finding) => [finding.id, finding]))
+
+    expect(byId.get('missing-start:process')?.params).toBeUndefined()
+    expect(byId.get('missing-end:process')?.params).toBeUndefined()
+    expect(byId.get('missing-incoming:Task_Lone')?.params).toEqual({
+      nodeType: 'userTask',
+      nodeId: 'Task_Lone',
+      nodeName: 'Lone step',
+    })
+    expect(byId.get('missing-outgoing:Task_Bare')?.params).toEqual({
+      nodeType: 'serviceTask',
+      nodeId: 'Task_Bare',
+    })
+    expect(byId.get('exclusive-gateway-outgoing:Gateway_Closed')?.params).toEqual({
+      nodeType: 'exclusiveGateway',
+      nodeId: 'Gateway_Closed',
+      count: 0,
+    })
   })
 })

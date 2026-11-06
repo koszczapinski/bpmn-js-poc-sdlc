@@ -55,6 +55,7 @@ export function validateProcess(model: BpmnProcessModel): Finding[] {
           node,
           'exclusive-gateway-outgoing',
           `${describe(node)} has ${outgoingCount} outgoing sequence ${noun}; at least 2 are required.`,
+          outgoingCount,
         ),
       )
     }
@@ -63,12 +64,23 @@ export function validateProcess(model: BpmnProcessModel): Finding[] {
   return findings
 }
 
-function nodeFinding(node: FlowNode, code: Finding['code'], message: string): Finding {
+function nodeFinding(
+  node: FlowNode,
+  code: Finding['code'],
+  message: string,
+  count?: number,
+): Finding {
   return {
     id: `${code}:${node.id}`,
     code,
     elementId: node.id,
     message,
+    params: {
+      nodeType: node.type,
+      nodeId: node.id,
+      ...(node.name ? { nodeName: node.name } : {}),
+      ...(count === undefined ? {} : { count }),
+    },
   }
 }
 

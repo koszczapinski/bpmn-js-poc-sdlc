@@ -26,7 +26,7 @@ describe('architecture boundaries', () => {
     for (const file of files) {
       const source = readFileSync(file, 'utf8')
       expect(specifiers(source), file).not.toEqual(
-        expect.arrayContaining([expect.stringMatching(/react|bpmn-js|diagram-js|adapters/)]),
+        expect.arrayContaining([expect.stringMatching(/react|bpmn-js|diagram-js|adapters|i18n/)]),
       )
       expect(source, file).not.toMatch(/DOMParser|\bdocument\b|\bwindow\b/)
     }
