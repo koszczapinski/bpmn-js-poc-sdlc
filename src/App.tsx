@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, type ChangeEvent } from 'react'
 import { LanguageSwitch } from './components/LanguageSwitch'
 import { PropertiesPanel } from './components/PropertiesPanel'
 import { ValidationPanel } from './components/ValidationPanel'
@@ -18,7 +18,14 @@ function InvoiceApp() {
   const { t, text } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const diagram = useInvoiceDiagram(containerRef)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const ready = diagram.phase === 'ready'
+
+  function onFileChosen(event: ChangeEvent<HTMLInputElement>): void {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (file) void diagram.openFile(file)
+  }
 
   return (
     <div className="app">
@@ -37,6 +44,22 @@ function InvoiceApp() {
             {diagram.phase === 'error' && t('status.error')}
           </p>
           <LanguageSwitch />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".bpmn,.xml,text/xml"
+            hidden
+            aria-label={t('toolbar.openFileLabel')}
+            onChange={onFileChosen}
+          />
+          <button
+            type="button"
+            className="button"
+            disabled={!ready}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {t('toolbar.open')}
+          </button>
           <button
             type="button"
             className="button"

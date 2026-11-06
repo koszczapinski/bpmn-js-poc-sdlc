@@ -22,6 +22,8 @@ export interface EditorHistory {
 
 export interface BpmnEditor {
   importXml(xml: string): Promise<{ warnings: string[] }>
+  /** Replaces the diagram. If the modeler rejects the XML, the previous diagram is put back. */
+  replaceXml(xml: string): Promise<{ warnings: string[] }>
   saveXml(): Promise<string>
   onSelectionChanged(handler: (element: SelectedElement | null) => void): () => void
   onModelChanged(handler: () => void): () => void
@@ -70,6 +72,21 @@ class BpmnJsEditor implements BpmnEditor {
     const result = await this.modeler.importXML(xml)
     this.publishSelection()
     return { warnings: (result.warnings ?? []).map(warningText) }
+  }
+
+  async replaceXml(xml: string): Promise<{ warnings: string[] }> {
+    const previous = await this.saveXml()
+    try {
+      return await this.importXml(xml)
+    } catch (error) {
+      try {
+        await this.modeler.importXML(previous)
+      } catch {
+        // Report the file's error, not the failed restore.
+      }
+      this.publishSelection()
+      throw error
+    }
   }
 
   async saveXml(): Promise<string> {

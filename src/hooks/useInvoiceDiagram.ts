@@ -33,6 +33,7 @@ export interface InvoiceDiagram {
   actionError: UiText | null
   validate: () => Promise<void>
   download: () => Promise<void>
+  openFile: (file: File) => Promise<void>
   fit: () => void
   undo: () => void
   redo: () => void
@@ -141,6 +142,29 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     }
   }
 
+  async function openFile(file: File): Promise<void> {
+    const editor = editorRef.current
+    if (!editor) {
+      setActionError({ key: 'error.modelerNotReady' })
+      return
+    }
+
+    try {
+      const result = await editor.replaceXml(await file.text())
+      editor.clearFocus()
+      editor.fit()
+      setWarnings(result.warnings)
+      setValidation({ status: 'idle' })
+      setActiveFindingId(null)
+      setFocusMessage(null)
+      setActionError(null)
+    } catch (error) {
+      setActionError(errorText(error, 'error.openFileFailed'))
+    } finally {
+      setHistory(editor.history())
+    }
+  }
+
   function fit(): void {
     editorRef.current?.fit()
   }
@@ -179,6 +203,7 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     actionError,
     validate,
     download,
+    openFile,
     fit,
     undo,
     redo,
