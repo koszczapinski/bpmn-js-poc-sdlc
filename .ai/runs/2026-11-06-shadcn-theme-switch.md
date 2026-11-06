@@ -89,7 +89,7 @@ The interface is built on shadcn/ui components (Tailwind CSS), opens in the ligh
 
 ### Phase 5: Migrate the components
 
-- [ ] 5.1 Move the UI to shadcn components and trim styles.css
+- [x] 5.1 Move the UI to shadcn components and trim styles.css — e4466e8
 
 ### Phase 6: Gate and browser check
 
