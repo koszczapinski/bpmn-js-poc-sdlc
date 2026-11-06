@@ -56,6 +56,11 @@ CI does not deploy and does not start a database or browser service.
 | AC-PARSE-6 | `src/App.test.tsx`                                            |
 | AC-UI-1    | `src/App.test.tsx`                                            |
 | AC-UI-2    | `src/App.test.tsx`                                            |
+| AC-I18N-1  | `src/App.test.tsx`                                            |
+| AC-I18N-2  | `src/App.test.tsx`                                            |
+| AC-I18N-3  | `src/App.test.tsx`                                            |
+| AC-I18N-4  | `src/i18n/messages.test.ts`, `src/i18n/formatFinding.test.ts` |
+| AC-I18N-5  | `src/domain/validateProcess.test.ts`                          |
 | AC-ARCH-1  | `src/domain/architecture.test.ts`                             |
 
 Every row above is an automated test. None of them are marked planned.

@@ -2,31 +2,31 @@
 
 ## Purpose
 
-Show a real BPMN 2.0 invoice-approval diagram in bpmn-js, inspect the selected element, run a small structural check, and download the current XML.
+Show a real BPMN 2.0 invoice-approval diagram in bpmn-js, inspect the selected element, run a small structural check, and download the current XML. The interface is available in English (default) and Polish; the bundled diagram is English.
 
 A passing check does **not** mean the document is valid BPMN 2.0, executable, or free of modeling mistakes outside the rules below. The bundled sample is marked `isExecutable="false"`. This app never runs the process.
 
 ## Invoice flow
 
-The bundled file is `src/bpmn/invoiceApproval.bpmn`, process `Process_InvoiceApproval` ("Zatwierdzenie faktury").
+The bundled file is `src/bpmn/invoiceApproval.bpmn`, process `Process_InvoiceApproval` ("Invoice approval").
 
-| Step                   | Id                    | Element           | Name                       |
-| ---------------------- | --------------------- | ----------------- | -------------------------- |
-| Invoice received       | `Start_Received`      | start event       | Faktura otrzymana          |
-| Clerk validation       | `Task_Validate`       | user task         | Walidacja przez referenta  |
-| Valid?                 | `Gateway_Valid`       | exclusive gateway | Poprawna?                  |
-| Ask for clarification  | `Task_Clarify`        | user task         | Prośba o wyjaśnienie       |
-| Amount over 1,000 PLN? | `Gateway_Amount`      | exclusive gateway | Kwota > 1000 PLN?          |
-| Auto approve           | `Task_AutoApprove`    | service task      | Automatyczne zatwierdzenie |
-| Manager approval       | `Task_ManagerApprove` | user task         | Zatwierdzenie kierownika   |
-| Archive                | `Task_Archive`        | service task      | Archiwizacja faktury       |
-| End                    | `End_Archived`        | end event         | Koniec                     |
+| Step                   | Id                    | Element           | Name                  |
+| ---------------------- | --------------------- | ----------------- | --------------------- |
+| Invoice received       | `Start_Received`      | start event       | Invoice received      |
+| Clerk validation       | `Task_Validate`       | user task         | Clerk validation      |
+| Valid?                 | `Gateway_Valid`       | exclusive gateway | Valid?                |
+| Ask for clarification  | `Task_Clarify`        | user task         | Request clarification |
+| Amount over 1,000 PLN? | `Gateway_Amount`      | exclusive gateway | Amount > 1000 PLN?    |
+| Auto approve           | `Task_AutoApprove`    | service task      | Automatic approval    |
+| Manager approval       | `Task_ManagerApprove` | user task         | Manager approval      |
+| Archive                | `Task_Archive`        | service task      | Archive invoice       |
+| End                    | `End_Archived`        | end event         | End                   |
 
 Sequence flows:
 
 - `Start_Received` → `Task_Validate` → `Gateway_Valid`
-- `Gateway_Valid` — Tak → `Gateway_Amount` (default)
-- `Gateway_Valid` — Nie → `Task_Clarify` → back to `Task_Validate`
+- `Gateway_Valid` — Yes → `Gateway_Amount` (default)
+- `Gateway_Valid` — No → `Task_Clarify` → back to `Task_Validate`
 - `Gateway_Amount` — ≤ 1000 PLN → `Task_AutoApprove` (default)
 - `Gateway_Amount` — > 1000 PLN → `Task_ManagerApprove`
 - `Task_AutoApprove` and `Task_ManagerApprove` → `Task_Archive` → `End_Archived`
@@ -37,7 +37,7 @@ Automatic approval and archive are service tasks because no person performs them
 
 ### Diagram
 
-**AC-FLOW-1.** Given the bundled XML, when it is parsed, then the process id, name, nodes, and sequence flows match the table above, `isExecutable` is false, and the non-default flows carry the `invoiceValid == false` and `amount > 1000` conditions.
+**AC-FLOW-1.** Given the bundled XML, when it is parsed, then the process id, name, nodes, and sequence flows match the table above, `isExecutable` is false, the non-default flows carry the `invoiceValid == false` and `amount > 1000` conditions, and every label in the diagram is English (the interface language never changes the diagram).
 
 **AC-FLOW-2.** Given the app has just opened, when the modeler finishes starting, then it has imported that same XML and fitted the viewport.
 
@@ -49,7 +49,7 @@ Automatic approval and archive are service tasks because no person performs them
 
 ### Validation
 
-The validator receives the parsed model, not XML and not a bpmn-js element.
+The validator receives the parsed model, not XML and not a bpmn-js element. The finding texts quoted below are the English `message` of each finding; the UI shows the same finding in the selected language (AC-I18N-5).
 
 **AC-VAL-1.** Given a process with no start event, when it is validated, then one finding says `The process has no start event.` and does not point at an element id.
 
@@ -83,10 +83,24 @@ The validator receives the parsed model, not XML and not a bpmn-js element.
 
 The adapter uses the first `process` only. It does not walk inside a sub-process. It ignores `incoming` and `outgoing` children and builds the graph from `sequenceFlow` `sourceRef` and `targetRef`. Unknown element types are skipped rather than treated as flow nodes.
 
+### Interface language
+
+The interface has two languages: English (`en`, default) and Polish (`pl`). The selected language is UI state held by React for the current page only; it is not stored and a reload returns to English. Names inside the diagram are model data and are never translated.
+
+**AC-I18N-1.** Given the app has just opened, when it renders, then every interface text is English, the language switch shows English as selected, and `<html lang>` is `en`. The app never selects Polish on its own.
+
+**AC-I18N-2.** Given the user selects PL in the language switch, when the interface re-renders, then the header, status line, toolbar buttons, canvas caption, selection panel (including element type labels), structure-check panel (rules note, idle, running and error states, finding count and finding texts), and the "not on the current diagram" message are Polish, and `<html lang>` is `pl`. Selecting EN restores English.
+
+**AC-I18N-3.** Given a diagram is open, when the user changes the language, then the modeler is not re-imported, the selection is unchanged, and a validation result that is already shown stays shown and is re-rendered in the new language. Findings are translated from their code and parameters; Validate is not run again.
+
+**AC-I18N-4.** Given the English and Polish dictionaries, when they are compared, then both define the same keys and use the same `{placeholders}` for each key, and counts use the plural forms of the selected language (Polish: one, few, many). Given a finding, then its English interface text equals the English `message` the domain produced.
+
+**AC-I18N-5.** Given validation produced a finding, then the finding carries its `code` and the values its sentence is built from (`params`: `nodeType`, `nodeId`, and when present `nodeName` and `count`) next to the English `message`. The UI builds the displayed sentence from code and params, so `src/domain` needs no translation code. Texts that are model data or come from a library are shown as they are: element names, bpmn-js canvas and context-pad labels, bpmn-js import notes, and parser error messages (AC-PARSE-\*).
+
 ### UI states
 
 **AC-UI-1.** Given the diagram has not imported yet, when the app renders, then a status says `Opening the invoice diagram…`.
 
 **AC-UI-2.** Given import fails, when the error is caught, then a status says the diagram could not be opened and an alert shows the error message.
 
-**AC-ARCH-1.** Given the source tree, when the architecture test reads it, then `src/domain` has no React, bpmn-js, diagram-js, or DOM parser usage, `DOMParser` appears only in the XML adapter, and bpmn-js imports appear only in the modeler adapter and `src/main.tsx`.
+**AC-ARCH-1.** Given the source tree, when the architecture test reads it, then `src/domain` has no React, bpmn-js, diagram-js, `src/i18n`, or DOM parser usage, `DOMParser` appears only in the XML adapter, and bpmn-js imports appear only in the modeler adapter and `src/main.tsx`.
