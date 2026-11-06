@@ -37,6 +37,22 @@ function InvoiceApp() {
             {diagram.phase === 'error' && t('status.error')}
           </p>
           <LanguageSwitch />
+          <button
+            type="button"
+            className="button"
+            disabled={!ready || !diagram.history.canUndo}
+            onClick={diagram.undo}
+          >
+            {t('toolbar.undo')}
+          </button>
+          <button
+            type="button"
+            className="button"
+            disabled={!ready || !diagram.history.canRedo}
+            onClick={diagram.redo}
+          >
+            {t('toolbar.redo')}
+          </button>
           <button type="button" className="button" disabled={!ready} onClick={diagram.fit}>
             {t('toolbar.fit')}
           </button>

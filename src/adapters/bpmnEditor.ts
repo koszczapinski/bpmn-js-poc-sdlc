@@ -1,6 +1,7 @@
 import type Modeling from 'bpmn-js/lib/features/modeling/Modeling'
 import BpmnModeler from 'bpmn-js/lib/Modeler'
 import type { Element } from 'bpmn-js/lib/model/Types'
+import type CommandStack from 'diagram-js/lib/command/CommandStack'
 import type Canvas from 'diagram-js/lib/core/Canvas'
 import type ElementRegistry from 'diagram-js/lib/core/ElementRegistry'
 import type { ElementLike } from 'diagram-js/lib/model/Types'
@@ -14,12 +15,20 @@ export interface SelectedElement {
   name: string
 }
 
+export interface EditorHistory {
+  canUndo: boolean
+  canRedo: boolean
+}
+
 export interface BpmnEditor {
   importXml(xml: string): Promise<{ warnings: string[] }>
   saveXml(): Promise<string>
   onSelectionChanged(handler: (element: SelectedElement | null) => void): () => void
   onModelChanged(handler: () => void): () => void
   updateName(id: string, name: string): void
+  history(): EditorHistory
+  undo(): void
+  redo(): void
   focus(id: string): boolean
   clearFocus(): void
   fit(): void
@@ -98,6 +107,19 @@ class BpmnJsEditor implements BpmnEditor {
     this.modeling().updateProperties(element as Element, { name })
   }
 
+  history(): EditorHistory {
+    const stack = this.commandStack()
+    return { canUndo: stack.canUndo(), canRedo: stack.canRedo() }
+  }
+
+  undo(): void {
+    this.commandStack().undo()
+  }
+
+  redo(): void {
+    this.commandStack().redo()
+  }
+
   focus(id: string): boolean {
     this.clearFocus()
     const element = this.registry().get(id)
@@ -153,6 +175,10 @@ class BpmnJsEditor implements BpmnEditor {
 
   private registry(): ElementRegistry {
     return this.modeler.get<ElementRegistry>('elementRegistry')
+  }
+
+  private commandStack(): CommandStack {
+    return this.modeler.get<CommandStack>('commandStack')
   }
 
   private modeling(): Modeling {
