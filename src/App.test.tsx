@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -122,6 +122,10 @@ async function renderFailedImport() {
   render(<App />)
   await screen.findByRole('alert')
   return { user }
+}
+
+function bpmnFile(xml: string, name: string): File {
+  return new File([xml], name, { type: 'text/xml' })
 }
 
 const brokenXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -303,6 +307,70 @@ describe('App', () => {
     act(() => modeler.emit('commandStack.changed', {}))
     await user.click(screen.getByRole('button', { name: 'Undo' }))
     expect(screen.getByText('Not checked yet.')).toBeInTheDocument()
+  })
+
+  it('AC-FLOW-5: opening a file replaces the diagram and resets selection, check result, and history', async () => {
+    const { user, modeler } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'Validate' }))
+    expect(await screen.findByText('No structural issues in this subset.')).toBeInTheDocument()
+    act(() => {
+      modeler.emit('selection.changed', {
+        newSelection: [
+          { id: 'Task_Validate', type: 'bpmn:UserTask', businessObject: { name: 'Validate' } },
+        ],
+      })
+    })
+    modeler.history = { canUndo: true, canRedo: false }
+    act(() => modeler.emit('commandStack.changed', {}))
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled()
+    modeler.canvas.zoom.mockClear()
+
+    await user.upload(screen.getByLabelText('BPMN file'), bpmnFile(brokenXml, 'mine.bpmn'))
+
+    await waitFor(() => expect(modeler.importXML).toHaveBeenLastCalledWith(brokenXml))
+    expect(await screen.findByText('Not checked yet.')).toBeInTheDocument()
+    expect(modeler.canvas.zoom).toHaveBeenCalledWith('fit-viewport')
+    expect(screen.queryByRole('textbox', { name: /Name/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Redo' })).toBeDisabled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('AC-FLOW-5: choosing the same file twice opens it twice', async () => {
+    const { user, modeler } = await renderReady()
+    const input = screen.getByLabelText('BPMN file')
+    const file = bpmnFile(brokenXml, 'mine.bpmn')
+
+    await user.upload(input, file)
+    await waitFor(() => expect(modeler.importXML).toHaveBeenCalledTimes(2))
+    await user.upload(input, file)
+    await waitFor(() => expect(modeler.importXML).toHaveBeenCalledTimes(3))
+  })
+
+  it('AC-FLOW-6: a rejected file shows an alert and keeps the open diagram and its check result', async () => {
+    const { user, modeler } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'Validate' }))
+    expect(await screen.findByText('No structural issues in this subset.')).toBeInTheDocument()
+    modelerState.importImpl = async (xml) => {
+      if (xml === 'not bpmn') throw new Error('unparsable content')
+      return { warnings: [] }
+    }
+
+    await user.upload(screen.getByLabelText('BPMN file'), bpmnFile('not bpmn', 'bad.bpmn'))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('unparsable content')
+    expect(screen.getByRole('status')).toHaveTextContent('Diagram ready')
+    expect(screen.getByText('No structural issues in this subset.')).toBeInTheDocument()
+    expect(String(modeler.importXML.mock.lastCall?.[0])).toContain('Process_InvoiceApproval')
+    expect(modeler.xml).toContain('Process_InvoiceApproval')
+  })
+
+  it('AC-FLOW-5: Open BPMN is disabled until the diagram is ready', async () => {
+    modelerState.importImpl = async () => {
+      throw new Error('parser blew up')
+    }
+    await renderFailedImport()
+    expect(screen.getByRole('button', { name: 'Open BPMN' })).toBeDisabled()
   })
 
   it('AC-STATE-1: a model edit clears a previous validation result', async () => {
