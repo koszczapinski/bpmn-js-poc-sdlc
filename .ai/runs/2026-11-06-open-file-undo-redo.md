@@ -56,6 +56,8 @@ A user can open a local `.bpmn` file that replaces the diagram in the modeler, a
 
 ## Progress
 
+PR: #4
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Spec first
@@ -75,5 +77,5 @@ A user can open a local `.bpmn` file that replaces the diagram in the modeler, a
 
 ### Phase 4: Gate and browser check
 
-- [ ] 4.1 Run the full check
+- [x] 4.1 Run the full check — 09b794e
 - [ ] 4.2 Check the app by hand in a browser
