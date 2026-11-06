@@ -130,7 +130,7 @@ describe('App', () => {
     const modeler = activeModeler()
     const xml = String(modeler.importXML.mock.calls[0]?.[0])
     expect(xml).toContain('Process_InvoiceApproval')
-    expect(xml).toContain('Walidacja przez referenta')
+    expect(xml).toContain('Clerk validation')
     expect(xml).toContain('Gateway_Amount')
     expect(modeler.canvas.zoom).toHaveBeenCalledWith('fit-viewport')
     expect(screen.getByText(/Not a BPMN 2.0 schema check or a process engine/)).toBeInTheDocument()

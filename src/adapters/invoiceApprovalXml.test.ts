@@ -13,24 +13,24 @@ describe('bundled invoice approval diagram', () => {
 
     expect(model).toMatchObject({
       id: 'Process_InvoiceApproval',
-      name: 'Zatwierdzenie faktury',
+      name: 'Invoice approval',
     })
     expect(model.nodes).toEqual([
-      { id: 'Start_Received', type: 'startEvent', name: 'Faktura otrzymana' },
-      { id: 'Task_Validate', type: 'userTask', name: 'Walidacja przez referenta' },
-      { id: 'Gateway_Valid', type: 'exclusiveGateway', name: 'Poprawna?' },
-      { id: 'Task_Clarify', type: 'userTask', name: 'Prośba o wyjaśnienie' },
-      { id: 'Gateway_Amount', type: 'exclusiveGateway', name: 'Kwota > 1000 PLN?' },
-      { id: 'Task_AutoApprove', type: 'serviceTask', name: 'Automatyczne zatwierdzenie' },
-      { id: 'Task_ManagerApprove', type: 'userTask', name: 'Zatwierdzenie kierownika' },
-      { id: 'Task_Archive', type: 'serviceTask', name: 'Archiwizacja faktury' },
-      { id: 'End_Archived', type: 'endEvent', name: 'Koniec' },
+      { id: 'Start_Received', type: 'startEvent', name: 'Invoice received' },
+      { id: 'Task_Validate', type: 'userTask', name: 'Clerk validation' },
+      { id: 'Gateway_Valid', type: 'exclusiveGateway', name: 'Valid?' },
+      { id: 'Task_Clarify', type: 'userTask', name: 'Request clarification' },
+      { id: 'Gateway_Amount', type: 'exclusiveGateway', name: 'Amount > 1000 PLN?' },
+      { id: 'Task_AutoApprove', type: 'serviceTask', name: 'Automatic approval' },
+      { id: 'Task_ManagerApprove', type: 'userTask', name: 'Manager approval' },
+      { id: 'Task_Archive', type: 'serviceTask', name: 'Archive invoice' },
+      { id: 'End_Archived', type: 'endEvent', name: 'End' },
     ])
     expect(model.flows).toEqual([
       { id: 'Flow_ToValidation', sourceId: 'Start_Received', targetId: 'Task_Validate' },
       { id: 'Flow_ToValidGateway', sourceId: 'Task_Validate', targetId: 'Gateway_Valid' },
-      { id: 'Flow_Valid', name: 'Tak', sourceId: 'Gateway_Valid', targetId: 'Gateway_Amount' },
-      { id: 'Flow_Invalid', name: 'Nie', sourceId: 'Gateway_Valid', targetId: 'Task_Clarify' },
+      { id: 'Flow_Valid', name: 'Yes', sourceId: 'Gateway_Valid', targetId: 'Gateway_Amount' },
+      { id: 'Flow_Invalid', name: 'No', sourceId: 'Gateway_Valid', targetId: 'Task_Clarify' },
       {
         id: 'Flow_ClarifyReturn',
         sourceId: 'Task_Clarify',
@@ -53,5 +53,12 @@ describe('bundled invoice approval diagram', () => {
       { id: 'Flow_ToEnd', sourceId: 'Task_Archive', targetId: 'End_Archived' },
     ])
     expect(validateProcess(model)).toEqual([])
+  })
+
+  it('AC-FLOW-1: every label in the bundled diagram is English', () => {
+    const labels = [...INVOICE_APPROVAL_XML.matchAll(/\bname="([^"]*)"/g)].map((match) => match[1])
+    expect(labels.length).toBeGreaterThan(0)
+    for (const label of labels) expect(label).not.toMatch(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/)
+    expect(INVOICE_APPROVAL_XML).not.toMatch(/Walidacja|Faktura|Kwota|Koniec|Zatwierdzenie/)
   })
 })
