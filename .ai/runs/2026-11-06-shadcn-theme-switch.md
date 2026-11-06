@@ -80,8 +80,8 @@ The interface is built on shadcn/ui components (Tailwind CSS), opens in the ligh
 
 ### Phase 3: shadcn foundation
 
-- [ ] 3.1 Add Tailwind, alias, components.json, cn, and tokens
-- [ ] 3.2 Add the shadcn components the app uses
+- [x] 3.1 Add Tailwind, alias, components.json, cn, and tokens — fa58215
+- [x] 3.2 Add the shadcn components the app uses — fa58215
 
 ### Phase 4: Theme switch
 
