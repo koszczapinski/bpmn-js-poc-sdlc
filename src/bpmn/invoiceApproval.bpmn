@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_InvoiceApproval" targetNamespace="http://example.com/invoice-approval" exporter="invoice-approval-poc" exporterVersion="1.0">
+  <bpmn:process id="Process_InvoiceApproval" name="Zatwierdzenie faktury" isExecutable="false">
+    <bpmn:startEvent id="Start_Received" name="Faktura otrzymana">
+      <bpmn:outgoing>Flow_ToValidation</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_Validate" name="Walidacja przez referenta">
+      <bpmn:incoming>Flow_ToValidation</bpmn:incoming>
+      <bpmn:incoming>Flow_ClarifyReturn</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToValidGateway</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Valid" name="Poprawna?" default="Flow_Valid">
+      <bpmn:incoming>Flow_ToValidGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Valid</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Invalid</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Clarify" name="Prośba o wyjaśnienie">
+      <bpmn:incoming>Flow_Invalid</bpmn:incoming>
+      <bpmn:outgoing>Flow_ClarifyReturn</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Amount" name="Kwota &gt; 1000 PLN?" default="Flow_Auto">
+      <bpmn:incoming>Flow_Valid</bpmn:incoming>
+      <bpmn:outgoing>Flow_Auto</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Manager</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_AutoApprove" name="Automatyczne zatwierdzenie">
+      <bpmn:incoming>Flow_Auto</bpmn:incoming>
+      <bpmn:outgoing>Flow_AutoArchive</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_ManagerApprove" name="Zatwierdzenie kierownika">
+      <bpmn:incoming>Flow_Manager</bpmn:incoming>
+      <bpmn:outgoing>Flow_ManagerArchive</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_Archive" name="Archiwizacja faktury">
+      <bpmn:incoming>Flow_AutoArchive</bpmn:incoming>
+      <bpmn:incoming>Flow_ManagerArchive</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Archived" name="Koniec">
+      <bpmn:incoming>Flow_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_ToValidation" sourceRef="Start_Received" targetRef="Task_Validate" />
+    <bpmn:sequenceFlow id="Flow_ToValidGateway" sourceRef="Task_Validate" targetRef="Gateway_Valid" />
+    <bpmn:sequenceFlow id="Flow_Valid" name="Tak" sourceRef="Gateway_Valid" targetRef="Gateway_Amount" />
+    <bpmn:sequenceFlow id="Flow_Invalid" name="Nie" sourceRef="Gateway_Valid" targetRef="Task_Clarify">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${invoiceValid == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ClarifyReturn" sourceRef="Task_Clarify" targetRef="Task_Validate" />
+    <bpmn:sequenceFlow id="Flow_Auto" name="≤ 1000 PLN" sourceRef="Gateway_Amount" targetRef="Task_AutoApprove" />
+    <bpmn:sequenceFlow id="Flow_Manager" name="&gt; 1000 PLN" sourceRef="Gateway_Amount" targetRef="Task_ManagerApprove">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${amount &gt; 1000}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_AutoArchive" sourceRef="Task_AutoApprove" targetRef="Task_Archive" />
+    <bpmn:sequenceFlow id="Flow_ManagerArchive" sourceRef="Task_ManagerApprove" targetRef="Task_Archive" />
+    <bpmn:sequenceFlow id="Flow_ToEnd" sourceRef="Task_Archive" targetRef="End_Archived" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_InvoiceApproval">
+    <bpmndi:BPMNPlane id="Plane_InvoiceApproval" bpmnElement="Process_InvoiceApproval">
+      <bpmndi:BPMNShape id="Start_Received_di" bpmnElement="Start_Received">
+        <dc:Bounds x="72" y="212" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="36" y="255" width="110" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Validate_di" bpmnElement="Task_Validate">
+        <dc:Bounds x="160" y="190" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Valid_di" bpmnElement="Gateway_Valid" isMarkerVisible="true">
+        <dc:Bounds x="400" y="205" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="388" y="176" width="74" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Clarify_di" bpmnElement="Task_Clarify">
+        <dc:Bounds x="335" y="420" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Amount_di" bpmnElement="Gateway_Amount" isMarkerVisible="true">
+        <dc:Bounds x="530" y="205" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="588" y="168" width="150" height="32" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AutoApprove_di" bpmnElement="Task_AutoApprove">
+        <dc:Bounds x="690" y="48" width="190" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ManagerApprove_di" bpmnElement="Task_ManagerApprove">
+        <dc:Bounds x="690" y="340" width="190" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Archive_di" bpmnElement="Task_Archive">
+        <dc:Bounds x="980" y="190" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Archived_di" bpmnElement="End_Archived">
+        <dc:Bounds x="1230" y="212" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1226" y="255" width="48" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_ToValidation_di" bpmnElement="Flow_ToValidation">
+        <di:waypoint x="108" y="230" />
+        <di:waypoint x="160" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToValidGateway_di" bpmnElement="Flow_ToValidGateway">
+        <di:waypoint x="340" y="230" />
+        <di:waypoint x="400" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Valid_di" bpmnElement="Flow_Valid">
+        <di:waypoint x="450" y="230" />
+        <di:waypoint x="530" y="230" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="474" y="206" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Invalid_di" bpmnElement="Flow_Invalid">
+        <di:waypoint x="425" y="255" />
+        <di:waypoint x="425" y="420" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="434" y="328" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ClarifyReturn_di" bpmnElement="Flow_ClarifyReturn">
+        <di:waypoint x="335" y="460" />
+        <di:waypoint x="250" y="460" />
+        <di:waypoint x="250" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Auto_di" bpmnElement="Flow_Auto">
+        <di:waypoint x="555" y="205" />
+        <di:waypoint x="555" y="88" />
+        <di:waypoint x="690" y="88" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="568" y="58" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Manager_di" bpmnElement="Flow_Manager">
+        <di:waypoint x="555" y="255" />
+        <di:waypoint x="555" y="380" />
+        <di:waypoint x="690" y="380" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="568" y="392" width="78" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AutoArchive_di" bpmnElement="Flow_AutoArchive">
+        <di:waypoint x="880" y="88" />
+        <di:waypoint x="1070" y="88" />
+        <di:waypoint x="1070" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ManagerArchive_di" bpmnElement="Flow_ManagerArchive">
+        <di:waypoint x="880" y="380" />
+        <di:waypoint x="1070" y="380" />
+        <di:waypoint x="1070" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToEnd_di" bpmnElement="Flow_ToEnd">
+        <di:waypoint x="1160" y="230" />
+        <di:waypoint x="1230" y="230" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
