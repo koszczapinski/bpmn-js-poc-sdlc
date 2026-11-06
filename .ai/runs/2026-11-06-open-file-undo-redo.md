@@ -60,8 +60,8 @@ A user can open a local `.bpmn` file that replaces the diagram in the modeler, a
 
 ### Phase 1: Spec first
 
-- [ ] 1.1 Update the spec with the new and changed acceptance criteria
-- [ ] 1.2 Update the traceability table
+- [x] 1.1 Update the spec with the new and changed acceptance criteria — 85be50c
+- [x] 1.2 Update the traceability table — 85be50c
 
 ### Phase 2: Undo and redo
 
