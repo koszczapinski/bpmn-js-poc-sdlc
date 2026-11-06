@@ -5,3 +5,4 @@ package-lock.json
 .agents
 .ai/trackers
 .ai/browsers
+.claude/skills/om-*
