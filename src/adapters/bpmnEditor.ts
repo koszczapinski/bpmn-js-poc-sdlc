@@ -1,6 +1,7 @@
 import type Modeling from 'bpmn-js/lib/features/modeling/Modeling'
 import BpmnModeler from 'bpmn-js/lib/Modeler'
 import type { Element } from 'bpmn-js/lib/model/Types'
+import type CommandStack from 'diagram-js/lib/command/CommandStack'
 import type Canvas from 'diagram-js/lib/core/Canvas'
 import type ElementRegistry from 'diagram-js/lib/core/ElementRegistry'
 import type { ElementLike } from 'diagram-js/lib/model/Types'
@@ -14,12 +15,22 @@ export interface SelectedElement {
   name: string
 }
 
+export interface EditorHistory {
+  canUndo: boolean
+  canRedo: boolean
+}
+
 export interface BpmnEditor {
   importXml(xml: string): Promise<{ warnings: string[] }>
+  /** Replaces the diagram. If the modeler rejects the XML, the previous diagram is put back. */
+  replaceXml(xml: string): Promise<{ warnings: string[] }>
   saveXml(): Promise<string>
   onSelectionChanged(handler: (element: SelectedElement | null) => void): () => void
   onModelChanged(handler: () => void): () => void
   updateName(id: string, name: string): void
+  history(): EditorHistory
+  undo(): void
+  redo(): void
   focus(id: string): boolean
   clearFocus(): void
   fit(): void
@@ -63,6 +74,21 @@ class BpmnJsEditor implements BpmnEditor {
     return { warnings: (result.warnings ?? []).map(warningText) }
   }
 
+  async replaceXml(xml: string): Promise<{ warnings: string[] }> {
+    const previous = await this.saveXml()
+    try {
+      return await this.importXml(xml)
+    } catch (error) {
+      try {
+        await this.modeler.importXML(previous)
+      } catch {
+        // Report the file's error, not the failed restore.
+      }
+      this.publishSelection()
+      throw error
+    }
+  }
+
   async saveXml(): Promise<string> {
     const result = await this.modeler.saveXML({ format: true })
     if (!result.xml) throw new Error('The modeler did not return BPMN XML.')
@@ -96,6 +122,19 @@ class BpmnJsEditor implements BpmnEditor {
     const element = this.registry().get(id)
     if (!element) return
     this.modeling().updateProperties(element as Element, { name })
+  }
+
+  history(): EditorHistory {
+    const stack = this.commandStack()
+    return { canUndo: stack.canUndo(), canRedo: stack.canRedo() }
+  }
+
+  undo(): void {
+    this.commandStack().undo()
+  }
+
+  redo(): void {
+    this.commandStack().redo()
   }
 
   focus(id: string): boolean {
@@ -153,6 +192,10 @@ class BpmnJsEditor implements BpmnEditor {
 
   private registry(): ElementRegistry {
     return this.modeler.get<ElementRegistry>('elementRegistry')
+  }
+
+  private commandStack(): CommandStack {
+    return this.modeler.get<CommandStack>('commandStack')
   }
 
   private modeling(): Modeling {

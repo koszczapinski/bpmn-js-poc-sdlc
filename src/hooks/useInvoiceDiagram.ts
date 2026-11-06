@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { parseBpmnXml } from '../adapters/parseBpmnXml'
-import { createBpmnEditor, type BpmnEditor, type SelectedElement } from '../adapters/bpmnEditor'
+import {
+  createBpmnEditor,
+  type BpmnEditor,
+  type EditorHistory,
+  type SelectedElement,
+} from '../adapters/bpmnEditor'
 import { downloadTextFile } from '../adapters/downloadTextFile'
 import { INVOICE_APPROVAL_XML, INVOICE_DOWNLOAD_NAME } from '../bpmn/sample'
 import { validateProcess } from '../domain/validateProcess'
@@ -22,12 +27,16 @@ export interface InvoiceDiagram {
   warnings: string[]
   selected: SelectedElement | null
   validation: ValidationState
+  history: EditorHistory
   activeFindingId: string | null
   focusMessage: UiText | null
   actionError: UiText | null
   validate: () => Promise<void>
   download: () => Promise<void>
+  openFile: (file: File) => Promise<void>
   fit: () => void
+  undo: () => void
+  redo: () => void
   rename: (id: string, name: string) => void
   selectFinding: (finding: Finding) => void
 }
@@ -37,6 +46,8 @@ function errorText(error: unknown, fallback: MessageKey): UiText {
   return error instanceof Error && error.message ? { text: error.message } : { key: fallback }
 }
 
+const NO_HISTORY: EditorHistory = { canUndo: false, canRedo: false }
+
 export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>): InvoiceDiagram {
   const editorRef = useRef<BpmnEditor | null>(null)
   const [phase, setPhase] = useState<DiagramPhase>('loading')
@@ -44,6 +55,7 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
   const [warnings, setWarnings] = useState<string[]>([])
   const [selected, setSelected] = useState<SelectedElement | null>(null)
   const [validation, setValidation] = useState<ValidationState>({ status: 'idle' })
+  const [history, setHistory] = useState<EditorHistory>(NO_HISTORY)
   const [activeFindingId, setActiveFindingId] = useState<string | null>(null)
   const [focusMessage, setFocusMessage] = useState<UiText | null>(null)
   const [actionError, setActionError] = useState<UiText | null>(null)
@@ -56,6 +68,7 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     editorRef.current = editor
     const unsubscribeSelection = editor.onSelectionChanged(setSelected)
     const unsubscribeModel = editor.onModelChanged(() => {
+      setHistory(editor.history())
       setValidation((current) =>
         current.status === 'done' || current.status === 'error' ? { status: 'idle' } : current,
       )
@@ -72,6 +85,7 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
       .then((result) => {
         if (cancelled) return
         setWarnings(result.warnings)
+        setHistory(editor.history())
         setPhase('ready')
         editor.fit()
       })
@@ -128,8 +142,39 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     }
   }
 
+  async function openFile(file: File): Promise<void> {
+    const editor = editorRef.current
+    if (!editor) {
+      setActionError({ key: 'error.modelerNotReady' })
+      return
+    }
+
+    try {
+      const result = await editor.replaceXml(await file.text())
+      editor.clearFocus()
+      editor.fit()
+      setWarnings(result.warnings)
+      setValidation({ status: 'idle' })
+      setActiveFindingId(null)
+      setFocusMessage(null)
+      setActionError(null)
+    } catch (error) {
+      setActionError(errorText(error, 'error.openFileFailed'))
+    } finally {
+      setHistory(editor.history())
+    }
+  }
+
   function fit(): void {
     editorRef.current?.fit()
+  }
+
+  function undo(): void {
+    editorRef.current?.undo()
+  }
+
+  function redo(): void {
+    editorRef.current?.redo()
   }
 
   function rename(id: string, name: string): void {
@@ -152,12 +197,16 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     warnings,
     selected,
     validation,
+    history,
     activeFindingId,
     focusMessage,
     actionError,
     validate,
     download,
+    openFile,
     fit,
+    undo,
+    redo,
     rename,
     selectFinding,
   }

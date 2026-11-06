@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -19,9 +19,11 @@ const { modelerState, MockModeler } = vi.hoisted(() => {
     static instances: MockModeler[] = []
     xml = ''
     private readonly listeners = new Map<string, Set<Listener>>()
+    history = { canUndo: false, canRedo: false }
     importXML = vi.fn(async (xml: string) => {
-      this.xml = xml
       const result = await modelerState.importImpl(xml)
+      this.xml = xml
+      this.history = { canUndo: false, canRedo: false }
       return { warnings: result.warnings ?? [] }
     })
     saveXML = vi.fn(async () => ({ xml: modelerState.saveXml ?? this.xml }))
@@ -56,6 +58,18 @@ const { modelerState, MockModeler } = vi.hoisted(() => {
       }),
     }
     modeling = { updateProperties: vi.fn() }
+    commandStack = {
+      canUndo: vi.fn(() => this.history.canUndo),
+      canRedo: vi.fn(() => this.history.canRedo),
+      undo: vi.fn(() => {
+        this.history = { canUndo: false, canRedo: true }
+        this.emit('commandStack.changed', {})
+      }),
+      redo: vi.fn(() => {
+        this.history = { canUndo: true, canRedo: false }
+        this.emit('commandStack.changed', {})
+      }),
+    }
 
     constructor() {
       MockModeler.instances.push(this)
@@ -76,6 +90,7 @@ const { modelerState, MockModeler } = vi.hoisted(() => {
       if (service === 'selection') return this.selection
       if (service === 'elementRegistry') return this.registry
       if (service === 'modeling') return this.modeling
+      if (service === 'commandStack') return this.commandStack
       throw new Error(`Unexpected service ${service}`)
     }
 
@@ -107,6 +122,10 @@ async function renderFailedImport() {
   render(<App />)
   await screen.findByRole('alert')
   return { user }
+}
+
+function bpmnFile(xml: string, name: string): File {
+  return new File([xml], name, { type: 'text/xml' })
 }
 
 const brokenXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -254,6 +273,104 @@ describe('App', () => {
       })
     })
     expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('Po poprawce')
+  })
+
+  it('AC-FLOW-7: Undo and Redo follow the modeler command stack', async () => {
+    const { user, modeler } = await renderReady()
+    const undo = screen.getByRole('button', { name: 'Undo' })
+    const redo = screen.getByRole('button', { name: 'Redo' })
+    expect(undo).toBeDisabled()
+    expect(redo).toBeDisabled()
+
+    modeler.history = { canUndo: true, canRedo: false }
+    act(() => modeler.emit('commandStack.changed', {}))
+    expect(undo).toBeEnabled()
+    expect(redo).toBeDisabled()
+
+    await user.click(undo)
+    expect(modeler.commandStack.undo).toHaveBeenCalledTimes(1)
+    expect(undo).toBeDisabled()
+    expect(redo).toBeEnabled()
+
+    await user.click(redo)
+    expect(modeler.commandStack.redo).toHaveBeenCalledTimes(1)
+    expect(undo).toBeEnabled()
+    expect(redo).toBeDisabled()
+  })
+
+  it('AC-FLOW-7 and AC-STATE-1: undo clears a shown check result', async () => {
+    const { user, modeler } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'Validate' }))
+    expect(await screen.findByText('No structural issues in this subset.')).toBeInTheDocument()
+
+    modeler.history = { canUndo: true, canRedo: false }
+    act(() => modeler.emit('commandStack.changed', {}))
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(screen.getByText('Not checked yet.')).toBeInTheDocument()
+  })
+
+  it('AC-FLOW-5: opening a file replaces the diagram and resets selection, check result, and history', async () => {
+    const { user, modeler } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'Validate' }))
+    expect(await screen.findByText('No structural issues in this subset.')).toBeInTheDocument()
+    act(() => {
+      modeler.emit('selection.changed', {
+        newSelection: [
+          { id: 'Task_Validate', type: 'bpmn:UserTask', businessObject: { name: 'Validate' } },
+        ],
+      })
+    })
+    modeler.history = { canUndo: true, canRedo: false }
+    act(() => modeler.emit('commandStack.changed', {}))
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled()
+    modeler.canvas.zoom.mockClear()
+
+    await user.upload(screen.getByLabelText('BPMN file'), bpmnFile(brokenXml, 'mine.bpmn'))
+
+    await waitFor(() => expect(modeler.importXML).toHaveBeenLastCalledWith(brokenXml))
+    expect(await screen.findByText('Not checked yet.')).toBeInTheDocument()
+    expect(modeler.canvas.zoom).toHaveBeenCalledWith('fit-viewport')
+    expect(screen.queryByRole('textbox', { name: /Name/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Redo' })).toBeDisabled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('AC-FLOW-5: choosing the same file twice opens it twice', async () => {
+    const { user, modeler } = await renderReady()
+    const input = screen.getByLabelText('BPMN file')
+    const file = bpmnFile(brokenXml, 'mine.bpmn')
+
+    await user.upload(input, file)
+    await waitFor(() => expect(modeler.importXML).toHaveBeenCalledTimes(2))
+    await user.upload(input, file)
+    await waitFor(() => expect(modeler.importXML).toHaveBeenCalledTimes(3))
+  })
+
+  it('AC-FLOW-6: a rejected file shows an alert and keeps the open diagram and its check result', async () => {
+    const { user, modeler } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'Validate' }))
+    expect(await screen.findByText('No structural issues in this subset.')).toBeInTheDocument()
+    modelerState.importImpl = async (xml) => {
+      if (xml === 'not bpmn') throw new Error('unparsable content')
+      return { warnings: [] }
+    }
+
+    await user.upload(screen.getByLabelText('BPMN file'), bpmnFile('not bpmn', 'bad.bpmn'))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('unparsable content')
+    expect(screen.getByRole('status')).toHaveTextContent('Diagram ready')
+    expect(screen.getByText('No structural issues in this subset.')).toBeInTheDocument()
+    expect(String(modeler.importXML.mock.lastCall?.[0])).toContain('Process_InvoiceApproval')
+    expect(modeler.xml).toContain('Process_InvoiceApproval')
+  })
+
+  it('AC-FLOW-5: Open BPMN is disabled until the diagram is ready', async () => {
+    modelerState.importImpl = async () => {
+      throw new Error('parser blew up')
+    }
+    await renderFailedImport()
+    expect(screen.getByRole('button', { name: 'Open BPMN' })).toBeDisabled()
   })
 
   it('AC-STATE-1: a model edit clears a previous validation result', async () => {

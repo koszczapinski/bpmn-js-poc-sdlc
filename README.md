@@ -1,6 +1,6 @@
 # Invoice approval BPMN demo
 
-A desktop-first proof of concept for a short technical demo. It opens a real BPMN 2.0 invoice-approval diagram in [bpmn-js](https://github.com/bpmn-io/bpmn-js), lets you select and rename elements, runs a small structural check, and downloads the current diagram as BPMN XML.
+A desktop-first proof of concept for a short technical demo. It opens a real BPMN 2.0 invoice-approval diagram in [bpmn-js](https://github.com/bpmn-io/bpmn-js), lets you select and rename elements, undo and redo edits, open your own `.bpmn` file in place of the sample, runs a small structural check, and downloads the current diagram as BPMN XML.
 
 The check is not a BPMN 2.0 schema validator and this app does not execute processes. A diagram can pass and still be invalid BPMN, or be valid BPMN and still fail these rules. The rules are listed in [the spec](docs/specs/invoice-approval-poc.md).
 
