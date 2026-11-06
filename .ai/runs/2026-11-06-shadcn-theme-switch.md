@@ -85,7 +85,7 @@ The interface is built on shadcn/ui components (Tailwind CSS), opens in the ligh
 
 ### Phase 4: Theme switch
 
-- [ ] 4.1 Add the theme provider, ThemeSwitch, and strings
+- [x] 4.1 Add the theme provider, ThemeSwitch, and strings — 3fb751f
 
 ### Phase 5: Migrate the components
 
