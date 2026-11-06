@@ -4,12 +4,7 @@
   "tracker": "github",
   "browser": { "provider": "agent-browser" },
   "validation": {
-    "commands": [
-      "npm run typecheck",
-      "npm run lint",
-      "npm run format:check",
-      "npm test"
-    ]
+    "commands": ["npm run typecheck", "npm run lint", "npm run format:check", "npm test"]
   },
   "labels": {
     "enabled": true,
@@ -22,14 +17,7 @@
       "blocked",
       "do-not-merge"
     ],
-    "category": [
-      "bug",
-      "feature",
-      "refactor",
-      "security",
-      "dependencies",
-      "documentation"
-    ],
+    "category": ["bug", "feature", "refactor", "security", "dependencies", "documentation"],
     "meta": [
       "needs-qa",
       "skip-qa",
@@ -38,12 +26,7 @@
       "in-progress",
       "ci-monitoring"
     ],
-    "priority": [
-      "priority-low",
-      "priority-medium",
-      "priority-high",
-      "priority-extreme"
-    ],
+    "priority": ["priority-low", "priority-medium", "priority-high", "priority-extreme"],
     "risk": ["risk-low", "risk-medium", "risk-high"]
   },
   "qaGate": true,

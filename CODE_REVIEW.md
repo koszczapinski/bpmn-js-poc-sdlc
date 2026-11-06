@@ -21,10 +21,10 @@ Rules for humans and for `om-code-review` / `om-auto-review-pr` in this reposito
 
 ## Severity
 
-| Severity | Use for |
-| -------- | ------- |
-| Blocker | Boundary violations, false BPMN-compliance claims, broken AC coverage, failing gate |
-| Major | Missing tests for a new AC, unclear selection/validation UX regressions |
-| Minor | Naming, comment noise, non-blocking style within Prettier/ESLint |
+| Severity | Use for                                                                             |
+| -------- | ----------------------------------------------------------------------------------- |
+| Blocker  | Boundary violations, false BPMN-compliance claims, broken AC coverage, failing gate |
+| Major    | Missing tests for a new AC, unclear selection/validation UX regressions             |
+| Minor    | Naming, comment noise, non-blocking style within Prettier/ESLint                    |
 
 A `risk-high` PR needs the evidence listed in `SDLC.md`. This demo has no auth, money, or multi-tenant surfaces today — treat broad diagram/model architecture changes as higher risk.
