@@ -1,3 +1,80 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* shadcn design tokens. Light is the default; the `dark` class on <html> selects dark. */
+:root {
+  color-scheme: light;
+  --radius: 0.5rem;
+  --background: oklch(0.97 0.004 250);
+  --foreground: oklch(0.24 0.02 250);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.02 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.02 250);
+  --primary: oklch(0.51 0.09 186);
+  --primary-foreground: oklch(0.98 0.01 186);
+  --secondary: oklch(0.95 0.008 250);
+  --secondary-foreground: oklch(0.24 0.02 250);
+  --muted: oklch(0.95 0.008 250);
+  --muted-foreground: oklch(0.5 0.025 250);
+  --accent: oklch(0.95 0.03 186);
+  --accent-foreground: oklch(0.38 0.07 186);
+  --destructive: oklch(0.5 0.17 25);
+  --border: oklch(0.9 0.01 250);
+  --input: oklch(0.86 0.012 250);
+  --ring: oklch(0.55 0.18 262);
+}
+
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.19 0.015 250);
+  --foreground: oklch(0.95 0.005 250);
+  --card: oklch(0.23 0.018 250);
+  --card-foreground: oklch(0.95 0.005 250);
+  --popover: oklch(0.23 0.018 250);
+  --popover-foreground: oklch(0.95 0.005 250);
+  --primary: oklch(0.72 0.1 186);
+  --primary-foreground: oklch(0.2 0.03 186);
+  --secondary: oklch(0.28 0.02 250);
+  --secondary-foreground: oklch(0.95 0.005 250);
+  --muted: oklch(0.28 0.02 250);
+  --muted-foreground: oklch(0.72 0.02 250);
+  --accent: oklch(0.32 0.04 186);
+  --accent-foreground: oklch(0.9 0.04 186);
+  --destructive: oklch(0.7 0.17 25);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 18%);
+  --ring: oklch(0.65 0.16 262);
+}
+
 :root {
   --desk: #e8edf2;
   --surface: #f7f9fb;
@@ -6,9 +83,9 @@
   --ink-soft: #5b6b7c;
   --line: #d5dde6;
   --line-strong: #b8c4d1;
-  --accent: #0f766e;
-  --accent-dark: #0b5a54;
-  --accent-soft: #e6f4f2;
+  --brand: #0f766e;
+  --brand-dark: #0b5a54;
+  --brand-soft: #e6f4f2;
   --alert: #9f2d2d;
   --alert-soft: #fbeeee;
   --focus: #2563eb;
@@ -92,7 +169,7 @@ summary:focus-visible {
   width: 2.1rem;
   height: 2.1rem;
   border-radius: 0.45rem;
-  background: linear-gradient(145deg, #12887e 0%, var(--accent-dark) 100%);
+  background: linear-gradient(145deg, #12887e 0%, var(--brand-dark) 100%);
   display: grid;
   place-items: center;
   flex: none;
@@ -167,14 +244,14 @@ h1 {
 }
 
 .button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--brand);
+  border-color: var(--brand);
   color: #f4fffd;
 }
 
 .button.primary:hover:not(:disabled) {
-  background: var(--accent-dark);
-  border-color: var(--accent-dark);
+  background: var(--brand-dark);
+  border-color: var(--brand-dark);
 }
 
 .lang-switch {
@@ -207,7 +284,7 @@ h1 {
 }
 
 .lang-option[aria-pressed='true'] {
-  background: var(--accent);
+  background: var(--brand);
   color: #f4fffd;
 }
 
@@ -285,7 +362,7 @@ h1 {
 }
 
 .djs-element.validation-focus .djs-visual > :nth-child(1) {
-  stroke: var(--accent) !important;
+  stroke: var(--brand) !important;
   stroke-width: 3px !important;
 }
 
@@ -415,7 +492,7 @@ code {
 }
 
 .field input:focus {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
   background: #fff;
 }
 
@@ -460,8 +537,8 @@ code {
 }
 
 .notice.ok {
-  background: var(--accent-soft);
-  color: var(--accent-dark);
+  background: var(--brand-soft);
+  color: var(--brand-dark);
 }
 
 .finding-list {
@@ -492,8 +569,8 @@ code {
 }
 
 .finding[aria-pressed='true'] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  border-color: var(--brand);
+  background: var(--brand-soft);
 }
 
 @media (max-width: 960px) {
