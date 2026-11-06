@@ -1,16 +1,20 @@
 import { useRef, type ChangeEvent } from 'react'
 import { LanguageSwitch } from './components/LanguageSwitch'
+import { ThemeSwitch } from './components/ThemeSwitch'
 import { PropertiesPanel } from './components/PropertiesPanel'
 import { ValidationPanel } from './components/ValidationPanel'
 import { useInvoiceDiagram } from './hooks/useInvoiceDiagram'
 import { useI18n } from './i18n/I18nContext'
 import { I18nProvider } from './i18n/I18nProvider'
+import { ThemeProvider } from './theme/ThemeProvider'
 
 export default function App() {
   return (
-    <I18nProvider>
-      <InvoiceApp />
-    </I18nProvider>
+    <ThemeProvider>
+      <I18nProvider>
+        <InvoiceApp />
+      </I18nProvider>
+    </ThemeProvider>
   )
 }
 
@@ -44,6 +48,7 @@ function InvoiceApp() {
             {diagram.phase === 'error' && t('status.error')}
           </p>
           <LanguageSwitch />
+          <ThemeSwitch />
           <input
             ref={fileInputRef}
             type="file"

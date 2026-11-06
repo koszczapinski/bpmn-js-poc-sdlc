@@ -450,16 +450,15 @@ describe('App', () => {
 
   it('AC-THEME-3: changing the theme keeps the diagram, selection, and check result, and is independent of language', async () => {
     const { user, modeler } = await renderReady()
+    const selected = {
+      id: 'Task_Validate',
+      type: 'bpmn:UserTask',
+      businessObject: { name: 'Clerk validation' },
+    }
+    // Saving XML re-reads the modeler's selection, so the modeler must report it like bpmn-js does.
+    modeler.selection.get.mockReturnValue([selected])
     act(() => {
-      modeler.emit('selection.changed', {
-        newSelection: [
-          {
-            id: 'Task_Validate',
-            type: 'bpmn:UserTask',
-            businessObject: { name: 'Clerk validation' },
-          },
-        ],
-      })
+      modeler.emit('selection.changed', { newSelection: [selected] })
     })
     await user.click(screen.getByRole('button', { name: 'Validate' }))
     await screen.findByText('No structural issues in this subset.')
