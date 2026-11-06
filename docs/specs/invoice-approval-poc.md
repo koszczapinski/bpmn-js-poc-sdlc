@@ -39,13 +39,19 @@ Automatic approval and archive are service tasks because no person performs them
 
 **AC-FLOW-1.** Given the bundled XML, when it is parsed, then the process id, name, nodes, and sequence flows match the table above, `isExecutable` is false, the non-default flows carry the `invoiceValid == false` and `amount > 1000` conditions, and every label in the diagram is English (the interface language never changes the diagram).
 
-**AC-FLOW-2.** Given the app has just opened, when the modeler finishes starting, then it has imported that same XML and fitted the viewport.
+**AC-FLOW-2.** Given the app has just opened, when the modeler finishes starting, then it has imported that same XML and fitted the viewport. The bundled XML is only the starting diagram; opening a file later replaces it (AC-FLOW-5).
 
 **AC-FLOW-3.** Given a selected element, when the panel renders, then it shows the id, a readable type, and the name from the modeler event. Given the user commits a new name with Enter or by leaving the field, when the modeler is updated, then `modeling.updateProperties` is called with that id and name. The panel does not keep its own copy of that name; it changes when `element.changed` reports the modeler's element. A label selection follows the label's target element.
 
 **AC-FLOW-4.** Given the modeler can save XML, when the user downloads, then the browser is given a file named `invoice-approval.bpmn` whose contents are the XML returned by the modeler at that moment. The download is not kept as a second diagram.
 
-**AC-STATE-1.** Given Validate has reported a result, when the modeler emits `commandStack.changed` because the diagram was edited, then that result is cleared and the panel says `Not checked yet.` Findings are a check of the modeler at one moment, not a stored process model.
+**AC-FLOW-5.** Given the diagram is ready, when the user chooses a local file with Open BPMN, then the file's text is imported into the modeler, the new diagram replaces the current one, and the viewport is fitted. The selection is cleared, a shown check result is cleared and the panel says `Not checked yet.`, and Undo and Redo are disabled because the opened file starts a new history. Choosing the same file twice opens it twice. Download (AC-FLOW-4) still returns whatever the modeler holds, under the name `invoice-approval.bpmn`.
+
+**AC-FLOW-6.** Given the user chooses a file the modeler rejects, when the import fails, then an alert shows the error message, the diagram that was open keeps its content, and the check result is not cleared. The edit history may be reset by the failed open.
+
+**AC-FLOW-7.** Given the diagram is ready, when the toolbar renders, then it has Undo and Redo buttons. Each is enabled only when the modeler's command stack has something to undo or redo, and that is read again whenever the modeler emits `commandStack.changed` and after an import. Given the user clicks Undo or Redo, when the modeler is updated, then the command stack is asked to undo or redo once, and the selection panel follows the modeler's `element.changed` event. The panel keeps no copy of the history.
+
+**AC-STATE-1.** Given Validate has reported a result, when the modeler emits `commandStack.changed` because the diagram was edited (including undo and redo), or a file is opened (AC-FLOW-5), then that result is cleared and the panel says `Not checked yet.` Findings are a check of the modeler at one moment, not a stored process model.
 
 ### Validation
 
