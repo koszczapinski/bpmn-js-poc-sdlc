@@ -70,8 +70,8 @@ A user can open a local `.bpmn` file that replaces the diagram in the modeler, a
 
 ### Phase 3: Open a local file
 
-- [ ] 3.1 Add failing tests for opening a file
-- [ ] 3.2 Implement opening a file in the adapter, hook, and toolbar
+- [x] 3.1 Add failing tests for opening a file — 997d577
+- [x] 3.2 Implement opening a file in the adapter, hook, and toolbar — c0e1c16
 
 ### Phase 4: Gate and browser check
 
