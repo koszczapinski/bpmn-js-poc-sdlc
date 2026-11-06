@@ -76,7 +76,7 @@ The interface is built on shadcn/ui components (Tailwind CSS), opens in the ligh
 
 ### Phase 2: Failing tests
 
-- [ ] 2.1 Add failing theme tests
+- [x] 2.1 Add failing theme tests — 6f46d64
 
 ### Phase 3: shadcn foundation
 
