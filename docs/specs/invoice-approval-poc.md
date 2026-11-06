@@ -103,6 +103,16 @@ The interface has two languages: English (`en`, default) and Polish (`pl`). The 
 
 **AC-I18N-5.** Given validation produced a finding, then the finding carries its `code` and the values its sentence is built from (`params`: `nodeType`, `nodeId`, and when present `nodeName` and `count`) next to the English `message`. The UI builds the displayed sentence from code and params, so `src/domain` needs no translation code. Texts that are model data or come from a library are shown as they are: element names, bpmn-js canvas and context-pad labels, bpmn-js import notes, and parser error messages (AC-PARSE-\*).
 
+### Interface theme
+
+The interface is built from shadcn/ui components and has two themes: light (default) and dark. The selected theme is UI state held by React for the current page only; it is not stored, the browser's colour-scheme preference is not read, and a reload returns to light. The theme styles the interface only. The diagram, its XML, and the bpmn-js canvas styling are not affected.
+
+**AC-THEME-1.** Given the app has just opened, when it renders, then the theme is light: `<html>` does not carry the `dark` class, and the theme switch shows the sun option as selected. The app never selects dark on its own.
+
+**AC-THEME-2.** Given the theme switch with a sun and a moon option, when the user selects the moon, then `<html>` carries the `dark` class and the moon option is selected; when the user selects the sun, then the `dark` class is removed and the sun option is selected. Each option has an accessible name in the selected interface language.
+
+**AC-THEME-3.** Given a diagram is open, when the user changes the theme, then the modeler is not re-imported, the selection is unchanged, and a validation result that is already shown stays shown. The theme and the interface language are independent: changing one does not change the other.
+
 ### UI states
 
 **AC-UI-1.** Given the diagram has not imported yet, when the app renders, then a status says `Opening the invoice diagram…`.
