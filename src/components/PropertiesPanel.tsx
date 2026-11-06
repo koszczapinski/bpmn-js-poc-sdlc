@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { flowNodeLabel } from '../domain/typeLabels'
 import type { SelectedElement } from '../adapters/bpmnEditor'
+import { useI18n } from '../i18n/I18nContext'
 
 interface PropertiesPanelProps {
   element: SelectedElement | null
@@ -8,23 +8,24 @@ interface PropertiesPanelProps {
 }
 
 export function PropertiesPanel({ element, onRename }: PropertiesPanelProps) {
+  const { t, typeLabel } = useI18n()
   return (
     <section className="panel" aria-labelledby="selection-heading">
-      <h2 id="selection-heading">Selection</h2>
+      <h2 id="selection-heading">{t('selection.heading')}</h2>
       {element ? (
         <>
           <dl className="meta">
-            <dt>Id</dt>
+            <dt>{t('selection.id')}</dt>
             <dd>
               <code>{element.id}</code>
             </dd>
-            <dt>Type</dt>
-            <dd>{flowNodeLabel(element.type)}</dd>
+            <dt>{t('selection.type')}</dt>
+            <dd>{typeLabel(element.type)}</dd>
           </dl>
           <NameField key={`${element.id}:${element.name}`} element={element} onRename={onRename} />
         </>
       ) : (
-        <p className="empty">Select a shape or flow. This panel shows its id, type, and name.</p>
+        <p className="empty">{t('selection.empty')}</p>
       )}
     </section>
   )
@@ -37,6 +38,7 @@ function NameField({
   element: SelectedElement
   onRename: (id: string, name: string) => void
 }) {
+  const { t } = useI18n()
   const [draft, setDraft] = useState(element.name)
 
   function commit() {
@@ -47,7 +49,7 @@ function NameField({
 
   return (
     <label className="field">
-      Name
+      {t('selection.name')}
       <input
         value={draft}
         spellCheck={false}
@@ -57,7 +59,7 @@ function NameField({
           if (event.key === 'Enter') event.currentTarget.blur()
         }}
       />
-      <span className="hint">Applied to the BPMN element when you leave the field.</span>
+      <span className="hint">{t('selection.hint')}</span>
     </label>
   )
 }

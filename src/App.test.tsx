@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -100,6 +100,13 @@ async function renderReady() {
   render(<App />)
   await screen.findByText('Diagram ready')
   return { user, modeler: activeModeler() }
+}
+
+async function renderFailedImport() {
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByRole('alert')
+  return { user }
 }
 
 const brokenXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -283,5 +290,137 @@ describe('App', () => {
     expect(download).toBe('invoice-approval.bpmn')
     expect(blobs).toHaveLength(1)
     await expect(blobs[0]?.text()).resolves.toBe(exported)
+  })
+
+  it('AC-I18N-1: opens in English with EN selected', async () => {
+    await renderReady()
+    expect(document.documentElement.lang).toBe('en')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Invoice approval')
+    const language = screen.getByRole('group', { name: 'Language' })
+    expect(within(language).getByRole('button', { name: 'EN' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(within(language).getByRole('button', { name: 'PL' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+
+  it('AC-I18N-2: PL translates the interface and EN restores it', async () => {
+    const { user, modeler } = await renderReady()
+    act(() => {
+      modeler.emit('selection.changed', {
+        newSelection: [
+          {
+            id: 'Task_Validate',
+            type: 'bpmn:UserTask',
+            businessObject: { name: 'Clerk validation' },
+          },
+        ],
+      })
+    })
+    expect(screen.getByText('User task')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'PL' }))
+
+    expect(document.documentElement.lang).toBe('pl')
+    expect(screen.getByRole('status')).toHaveTextContent('Diagram gotowy')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Zatwierdzanie faktury')
+    expect(screen.getByRole('button', { name: 'Dopasuj' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sprawdź' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pobierz BPMN' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Kontrola struktury' })).toBeInTheDocument()
+    expect(screen.getByText('Jeszcze nie sprawdzono.')).toBeInTheDocument()
+    expect(screen.getByText('Zadanie użytkownika')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /Nazwa/ })).toHaveValue('Clerk validation')
+    expect(screen.getByText(/To nie jest walidacja schematu BPMN 2.0/)).toBeInTheDocument()
+    expect(screen.queryByText('Diagram ready')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'EN' }))
+
+    expect(document.documentElement.lang).toBe('en')
+    expect(screen.getByRole('status')).toHaveTextContent('Diagram ready')
+    expect(screen.getByText('User task')).toBeInTheDocument()
+    expect(screen.getByText('Not checked yet.')).toBeInTheDocument()
+  })
+
+  it('AC-I18N-2: findings, their count, and the missing-element message follow the language', async () => {
+    modelerState.saveXml = brokenXml
+    const { user, modeler } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'PL' }))
+    await user.click(screen.getByRole('button', { name: 'Sprawdź' }))
+
+    expect(await screen.findByText('4 problemy strukturalne.')).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Bramka wyłączna "Decyzja" (Gateway_Thin) ma 1 wychodzący przepływ sekwencji; wymagane są co najmniej 2.',
+      }),
+    )
+    expect(modeler.selection.select).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'Gateway_Thin' }),
+    )
+
+    modelerState.missingIds.add('Task_Lone')
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Zadanie użytkownika "Osierocony krok" (Task_Lone) nie ma przychodzącego przepływu sekwencji.',
+      }),
+    )
+    expect(
+      screen.getByText('„Task_Lone” nie znajduje się na bieżącym diagramie.'),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'EN' }))
+    expect(screen.getByText('4 structural issues.')).toBeInTheDocument()
+    expect(screen.getByText('"Task_Lone" is not on the current diagram.')).toBeInTheDocument()
+  })
+
+  it('AC-I18N-3: changing the language keeps the diagram, the selection, and the validation result', async () => {
+    const { user, modeler } = await renderReady()
+    const selected = {
+      id: 'Task_Validate',
+      type: 'bpmn:UserTask',
+      businessObject: { name: 'Clerk validation' },
+    }
+    // Saving XML re-reads the modeler's selection, so the modeler must report it like bpmn-js does.
+    modeler.selection.get.mockReturnValue([selected])
+    act(() => {
+      modeler.emit('selection.changed', { newSelection: [selected] })
+    })
+    await user.click(screen.getByRole('button', { name: 'Validate' }))
+    expect(await screen.findByText('No structural issues in this subset.')).toBeInTheDocument()
+    expect(modeler.saveXML).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole('button', { name: 'PL' }))
+
+    expect(screen.getByText('Brak problemów strukturalnych w tym podzbiorze.')).toBeInTheDocument()
+    expect(screen.getByText('Task_Validate')).toBeInTheDocument()
+    expect(screen.getByText('Zadanie użytkownika')).toBeInTheDocument()
+    expect(MockModeler.instances).toHaveLength(1)
+    expect(modeler.importXML).toHaveBeenCalledTimes(1)
+    expect(modeler.saveXML).toHaveBeenCalledTimes(1)
+    expect(modeler.destroy).not.toHaveBeenCalled()
+  })
+
+  it('AC-I18N-5: library and model text is shown as it is in Polish', async () => {
+    modelerState.saveXml = '<definitions><process id="P">'
+    modelerState.importImpl = async () => ({ warnings: [{ message: 'Render skipped a label.' }] })
+    const { user } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'PL' }))
+
+    expect(screen.getByText('Render skipped a label.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Sprawdź' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('The BPMN XML is not well-formed.')
+  })
+
+  it('AC-I18N-2: an import failure without a message uses the translated fallback', async () => {
+    modelerState.importImpl = () => Promise.reject('boom')
+    const { user } = await renderFailedImport()
+    expect(screen.getByRole('alert')).toHaveTextContent('The diagram could not be opened.')
+
+    await user.click(screen.getByRole('button', { name: 'PL' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Nie udało się otworzyć diagramu.')
+    expect(screen.getByRole('status')).toHaveTextContent('Nie udało się otworzyć diagramu')
   })
 })
