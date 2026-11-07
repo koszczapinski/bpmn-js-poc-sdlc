@@ -409,6 +409,73 @@ describe('App', () => {
     await expect(blobs[0]?.text()).resolves.toBe(exported)
   })
 
+  it('AC-THEME-1: opens in the light theme with the sun selected', async () => {
+    await renderReady()
+    expect(document.documentElement).not.toHaveClass('dark')
+    const theme = screen.getByRole('group', { name: 'Theme' })
+    expect(within(theme).getByRole('button', { name: 'Light theme' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(within(theme).getByRole('button', { name: 'Dark theme' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+
+  it('AC-THEME-2: the moon selects the dark theme and the sun restores light', async () => {
+    const { user } = await renderReady()
+    const theme = screen.getByRole('group', { name: 'Theme' })
+    await user.click(within(theme).getByRole('button', { name: 'Dark theme' }))
+    expect(document.documentElement).toHaveClass('dark')
+    expect(within(theme).getByRole('button', { name: 'Dark theme' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await user.click(within(theme).getByRole('button', { name: 'Light theme' }))
+    expect(document.documentElement).not.toHaveClass('dark')
+    expect(within(theme).getByRole('button', { name: 'Light theme' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  it('AC-THEME-2: the theme options are named in the selected language', async () => {
+    const { user } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'PL' }))
+    const theme = screen.getByRole('group', { name: 'Motyw' })
+    expect(within(theme).getByRole('button', { name: 'Jasny motyw' })).toBeInTheDocument()
+    expect(within(theme).getByRole('button', { name: 'Ciemny motyw' })).toBeInTheDocument()
+  })
+
+  it('AC-THEME-3: changing the theme keeps the diagram, selection, and check result, and is independent of language', async () => {
+    const { user, modeler } = await renderReady()
+    const selected = {
+      id: 'Task_Validate',
+      type: 'bpmn:UserTask',
+      businessObject: { name: 'Clerk validation' },
+    }
+    // Saving XML re-reads the modeler's selection, so the modeler must report it like bpmn-js does.
+    modeler.selection.get.mockReturnValue([selected])
+    act(() => {
+      modeler.emit('selection.changed', { newSelection: [selected] })
+    })
+    await user.click(screen.getByRole('button', { name: 'Validate' }))
+    await screen.findByText('No structural issues in this subset.')
+    const imports = modeler.importXML.mock.calls.length
+
+    await user.click(screen.getByRole('button', { name: 'Dark theme' }))
+
+    expect(modeler.importXML).toHaveBeenCalledTimes(imports)
+    expect(screen.getByDisplayValue('Clerk validation')).toBeInTheDocument()
+    expect(screen.getByText('No structural issues in this subset.')).toBeInTheDocument()
+    expect(document.documentElement.lang).toBe('en')
+
+    await user.click(screen.getByRole('button', { name: 'PL' }))
+    expect(document.documentElement).toHaveClass('dark')
+    expect(document.documentElement.lang).toBe('pl')
+  })
+
   it('AC-I18N-1: opens in English with EN selected', async () => {
     await renderReady()
     expect(document.documentElement.lang).toBe('en')

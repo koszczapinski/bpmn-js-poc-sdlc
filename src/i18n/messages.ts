@@ -12,6 +12,9 @@ const en = {
   'app.lede':
     'Clerk validation → amount split (auto ≤ 1,000 PLN / manager above) → archive. Invalid invoices loop through clarification.',
   'language.label': 'Language',
+  'theme.label': 'Theme',
+  'theme.light': 'Light theme',
+  'theme.dark': 'Dark theme',
   'status.loading': 'Opening the invoice diagram…',
   'status.ready': 'Diagram ready',
   'status.error': 'The diagram could not be opened',
@@ -65,6 +68,9 @@ const pl: Record<MessageKey, Message> = {
   'app.lede':
     'Walidacja przez referenta → podział wg kwoty (automat ≤ 1000 PLN / powyżej kierownik) → archiwizacja. Błędne faktury wracają do wyjaśnienia.',
   'language.label': 'Język',
+  'theme.label': 'Motyw',
+  'theme.light': 'Jasny motyw',
+  'theme.dark': 'Ciemny motyw',
   'status.loading': 'Otwieranie diagramu faktury…',
   'status.ready': 'Diagram gotowy',
   'status.error': 'Nie udało się otworzyć diagramu',

@@ -35,6 +35,8 @@ The modeler provides pan, zoom, selection, label editing, and delete. **Fit** ca
 
 The interface opens in English. The **EN | PL** switch in the header changes the interface to Polish and back. It does not touch the diagram: the bundled diagram is English, element names are model data, and switching language neither re-imports the XML nor clears a validation result. bpmn-js canvas and context-pad labels, import notes, and XML parser messages stay in English. Texts live in typed dictionaries in `src/i18n`; no i18n library is used. The language is not stored, so a reload returns to English.
 
+The interface is built from [shadcn/ui](https://ui.shadcn.com) components on Tailwind CSS and opens in the light theme. The sun and moon switch in the header toggles light and dark. Like the language, the theme is React UI state only: it is not stored, the OS setting is not read, and a reload returns to light. The bpmn-js canvas keeps its own light styling in both themes.
+
 ## Rules that are actually checked
 
 - The process has at least one start event and one end event.
