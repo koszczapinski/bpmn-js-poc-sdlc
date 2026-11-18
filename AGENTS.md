@@ -17,3 +17,13 @@ This repository is a small BPMN.js proof of concept. Keep the change as small as
 Delivery flow, labels, and QA gate: `SDLC.md`. Pipeline config: `.ai/agentic.config.json`. Review rules: `CODE_REVIEW.md`. Protected surfaces: `BACKWARD_COMPATIBILITY.md`.
 
 Installed skills live under `.agents/skills/` (`om-*`). Prefer naming the skill for the next change (for example `om-brainstorm`, `om-spec-writing`, `om-auto-create-pr`, `om-auto-review-pr`) instead of free-form implementation. Behavior of this demo still goes through `docs/specs/invoice-approval-poc.md` and the local `.claude/skills/spec` + `.claude/skills/tdd` loop when those ACs change.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues (`koszczapinski/bpmn-js-poc-sdlc` via `gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context layout (root-level `GLOSSARY.md` and `docs/adr/`). See `docs/agents/domain.md`.
