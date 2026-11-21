@@ -67,6 +67,13 @@ CI does not deploy and does not start a database or browser service.
 | AC-THEME-1 | `src/App.test.tsx`                                            |
 | AC-THEME-2 | `src/App.test.tsx`                                            |
 | AC-THEME-3 | `src/App.test.tsx`                                            |
+| AC-ZEEBE-1 | `src/App.test.tsx`                                            |
+| AC-ZEEBE-2 | `src/adapters/invoiceApprovalXml.test.ts`                     |
+| AC-ZEEBE-3 | `src/App.test.tsx`                                            |
+| AC-SIM-1   | `src/App.test.tsx`                                            |
+| AC-SVG-1   | `src/App.test.tsx`                                            |
+| AC-NAV-1   | `src/App.test.tsx`                                            |
+| AC-LINT-1  | `src/adapters/invoiceApprovalXml.test.ts`                     |
 | AC-ARCH-1  | `src/domain/architecture.test.ts`                             |
 
 Every row above is an automated test. None of them are marked planned.

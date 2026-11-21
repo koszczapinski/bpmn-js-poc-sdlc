@@ -31,13 +31,20 @@ export interface InvoiceDiagram {
   activeFindingId: string | null
   focusMessage: UiText | null
   actionError: UiText | null
+  isSimulation: boolean
   validate: () => Promise<void>
   download: () => Promise<void>
+  downloadSvg: () => Promise<void>
   openFile: (file: File) => Promise<void>
   fit: () => void
+  zoomIn: () => void
+  zoomOut: () => void
+  toggleSimulation: () => void
   undo: () => void
   redo: () => void
   rename: (id: string, name: string) => void
+  updateJobType: (id: string, jobType: string) => void
+  updateFormId: (id: string, formId: string) => void
   selectFinding: (finding: Finding) => void
 }
 
@@ -59,6 +66,7 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
   const [activeFindingId, setActiveFindingId] = useState<string | null>(null)
   const [focusMessage, setFocusMessage] = useState<UiText | null>(null)
   const [actionError, setActionError] = useState<UiText | null>(null)
+  const [isSimulation, setIsSimulation] = useState<boolean>(false)
 
   useEffect(() => {
     const container = containerRef.current
@@ -67,6 +75,9 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     const editor = createBpmnEditor(container)
     editorRef.current = editor
     const unsubscribeSelection = editor.onSelectionChanged(setSelected)
+    const unsubscribeSimulation = editor.onSimulationToggled((active) => {
+      setIsSimulation(active)
+    })
     const unsubscribeModel = editor.onModelChanged(() => {
       setHistory(editor.history())
       setValidation((current) =>
@@ -99,6 +110,7 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
       cancelled = true
       observer?.disconnect()
       unsubscribeSelection()
+      unsubscribeSimulation()
       unsubscribeModel()
       editor.destroy()
       if (editorRef.current === editor) editorRef.current = null
@@ -142,6 +154,22 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     }
   }
 
+  async function downloadSvg(): Promise<void> {
+    const editor = editorRef.current
+    if (!editor) {
+      setActionError({ key: 'error.modelerNotReady' })
+      return
+    }
+
+    try {
+      const svg = await editor.saveSvg()
+      downloadTextFile('invoice-approval.svg', svg, 'image/svg+xml;charset=utf-8')
+      setActionError(null)
+    } catch (error) {
+      setActionError(errorText(error, 'error.downloadSvgFailed'))
+    }
+  }
+
   async function openFile(file: File): Promise<void> {
     const editor = editorRef.current
     if (!editor) {
@@ -169,6 +197,20 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     editorRef.current?.fit()
   }
 
+  function zoomIn(): void {
+    editorRef.current?.zoomIn()
+  }
+
+  function zoomOut(): void {
+    editorRef.current?.zoomOut()
+  }
+
+  function toggleSimulation(): void {
+    if (!editorRef.current) return
+    const next = editorRef.current.toggleSimulation()
+    setIsSimulation(next)
+  }
+
   function undo(): void {
     editorRef.current?.undo()
   }
@@ -179,6 +221,14 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
 
   function rename(id: string, name: string): void {
     editorRef.current?.updateName(id, name)
+  }
+
+  function updateJobType(id: string, jobType: string): void {
+    editorRef.current?.updateJobType(id, jobType)
+  }
+
+  function updateFormId(id: string, formId: string): void {
+    editorRef.current?.updateFormId(id, formId)
   }
 
   function selectFinding(finding: Finding): void {
@@ -201,13 +251,20 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     activeFindingId,
     focusMessage,
     actionError,
+    isSimulation,
     validate,
     download,
+    downloadSvg,
     openFile,
     fit,
+    zoomIn,
+    zoomOut,
+    toggleSimulation,
     undo,
     redo,
     rename,
+    updateJobType,
+    updateFormId,
     selectFinding,
   }
 }
