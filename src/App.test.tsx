@@ -159,6 +159,44 @@ function bpmnFile(xml: string, name: string): File {
   return new File([xml], name, { type: 'text/xml' })
 }
 
+function expectBlankProcess(xml: string) {
+  expect(xml).toContain('id="Process_Blank"')
+  expect(xml).toContain('isExecutable="false"')
+  expect(xml).toContain('BPMNPlane')
+  expect(xml.match(/<bpmn:process\b/g)).toHaveLength(1)
+  expect(xml).not.toContain('Process_InvoiceApproval')
+  expect(xml).not.toMatch(
+    /startEvent|endEvent|sequenceFlow|userTask|serviceTask|exclusiveGateway|BPMNShape|BPMNEdge/,
+  )
+}
+
+function expectNoPrompt() {
+  expect(screen.queryByRole('textbox', { name: 'Prompt' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('textbox', { name: 'Polecenie' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Generate diagram' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Generuj diagram' })).not.toBeInTheDocument()
+}
+
+function showSelection(modeler: ReturnType<typeof activeModeler>, id: string, name: string) {
+  const selected = {
+    id,
+    type: 'bpmn:UserTask',
+    businessObject: { name },
+  }
+  // Saving XML re-reads the modeler's selection. Drop it only once an import succeeds.
+  modeler.selection.get.mockReturnValue([selected])
+  const original = modeler.importXML.getMockImplementation()
+  modeler.importXML.mockImplementation(async (xml: string) => {
+    if (!original) throw new Error('The modeler import has no implementation.')
+    const result = await original.call(modeler, xml)
+    modeler.selection.get.mockReturnValue([])
+    return result ?? { warnings: [] }
+  })
+  act(() => {
+    modeler.emit('selection.changed', { newSelection: [selected] })
+  })
+}
+
 const brokenXml = `<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL">
   <process id="Process_Broken">
@@ -192,6 +230,7 @@ describe('App', () => {
     expect(modeler.canvas.zoom).toHaveBeenCalledWith('fit-viewport')
     expect(screen.getByText(/Not a BPMN 2.0 schema check or a process engine/)).toBeInTheDocument()
     expect(screen.getByText('Not checked yet.')).toBeInTheDocument()
+    expectNoPrompt()
   })
 
   it('AC-UI-2: shows the import error and does not claim the diagram is ready', async () => {
@@ -570,6 +609,152 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Open BPMN' })).toBeDisabled()
   })
 
+  it('AC-FLOW-8 and AC-FLOW-9: New diagram and Invoice sample stay disabled until the modeler is ready', async () => {
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'New diagram' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Invoice sample' })).toBeDisabled()
+    expectNoPrompt()
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Diagram ready')
+    expect(screen.getByRole('button', { name: 'New diagram' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Invoice sample' })).toBeEnabled()
+    expectNoPrompt()
+  })
+
+  it('AC-FLOW-8 and AC-FLOW-9: the actions are named in the selected language', async () => {
+    const { user } = await renderReady()
+    expect(screen.getByRole('button', { name: 'New diagram' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Invoice sample' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'PL' }))
+
+    expect(screen.getByRole('button', { name: 'Nowy diagram' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Przykład faktury' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'New diagram' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Invoice sample' })).not.toBeInTheDocument()
+    expectNoPrompt()
+  })
+
+  it('AC-FLOW-8 and AC-SIM-1: New diagram imports a blank process without confirmation and ends simulation', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => false)
+    const { user, modeler } = await renderReady()
+    showSelection(modeler, 'Task_Validate', 'Clerk validation')
+    modeler.history = { canUndo: true, canRedo: true }
+    act(() => modeler.emit('commandStack.changed', {}))
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Simulation' }))
+    expect(await screen.findByRole('button', { name: 'Stop simulation' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Dark theme' }))
+    await user.click(screen.getByRole('button', { name: 'PL' }))
+    await user.click(screen.getByRole('button', { name: 'Sprawdź' }))
+    expect(
+      await screen.findByText('Brak problemów strukturalnych w tym podzbiorze.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /Nazwa/ })).toHaveValue('Clerk validation')
+    modeler.canvas.zoom.mockClear()
+
+    await user.click(screen.getByRole('button', { name: 'Nowy diagram' }))
+
+    await waitFor(() => expect(modeler.importXML.mock.calls.length).toBeGreaterThan(1))
+    expectBlankProcess(String(modeler.importXML.mock.lastCall?.[0]))
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(modeler.canvas.zoom).toHaveBeenCalledWith('fit-viewport')
+    expect(await screen.findByText('Jeszcze nie sprawdzono.')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /Nazwa/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cofnij' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Ponów' })).toBeDisabled()
+    expect(modeler.commandStack.undo).not.toHaveBeenCalled()
+    expect(document.documentElement.lang).toBe('pl')
+    expect(document.documentElement).toHaveClass('dark')
+    expect(modeler.toggleMode._active).toBe(false)
+    expect(screen.getByRole('button', { name: 'Symulacja' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Zatrzymaj symulację' })).not.toBeInTheDocument()
+    expectNoPrompt()
+    confirmSpy.mockRestore()
+  })
+
+  it('AC-VAL-9: validating the blank process reports only a missing start and a missing end', async () => {
+    const { user } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'New diagram' }))
+    await waitFor(() =>
+      expect(String(activeModeler().importXML.mock.lastCall?.[0])).toContain('Process_Blank'),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Validate' }))
+
+    expect(await screen.findByText('2 structural issues.')).toBeInTheDocument()
+    const panel = screen.getByRole('region', { name: 'Structure check' })
+    const findings = within(panel).getAllByRole('button')
+    expect(findings.map((finding) => finding.textContent)).toEqual([
+      'The process has no start event.',
+      'The process has no end event.',
+    ])
+  })
+
+  it('AC-FLOW-9 and AC-SIM-1: Invoice sample re-imports the bundled diagram, including when it is already open', async () => {
+    const { user, modeler } = await renderReady()
+    showSelection(modeler, 'Task_Validate', 'Clerk validation')
+    modeler.history = { canUndo: true, canRedo: false }
+    act(() => modeler.emit('commandStack.changed', {}))
+    await user.click(screen.getByRole('button', { name: 'Simulation' }))
+    expect(await screen.findByRole('button', { name: 'Stop simulation' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Validate' }))
+    expect(await screen.findByText('No structural issues in this subset.')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('Clerk validation')
+    modeler.canvas.zoom.mockClear()
+    const importsBefore = modeler.importXML.mock.calls.length
+
+    await user.click(screen.getByRole('button', { name: 'Invoice sample' }))
+
+    await waitFor(() => expect(modeler.importXML).toHaveBeenCalledTimes(importsBefore + 1))
+    const again = String(modeler.importXML.mock.lastCall?.[0])
+    expect(again).toContain('Process_InvoiceApproval')
+    expect(again).toContain('Clerk validation')
+    expect(modeler.canvas.zoom).toHaveBeenCalledWith('fit-viewport')
+    expect(await screen.findByText('Not checked yet.')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /Name/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Redo' })).toBeDisabled()
+    expect(modeler.toggleMode._active).toBe(false)
+    expect(screen.getByRole('button', { name: 'Simulation' })).toBeInTheDocument()
+    expectNoPrompt()
+
+    await user.click(screen.getByRole('button', { name: 'Invoice sample' }))
+    await waitFor(() => expect(modeler.importXML).toHaveBeenCalledTimes(importsBefore + 2))
+    expect(String(modeler.importXML.mock.lastCall?.[0])).toContain('Process_InvoiceApproval')
+  })
+
+  it('AC-FLOW-4: download stays named invoice-approval.bpmn after New diagram and Invoice sample', async () => {
+    const blobs: Blob[] = []
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => {
+      blobs.push(blob as Blob)
+      return 'blob:invoice'
+    })
+    let download = ''
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      download = this.download
+    })
+
+    const { user, modeler } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'New diagram' }))
+    await waitFor(() =>
+      expect(String(modeler.importXML.mock.lastCall?.[0])).toContain('Process_Blank'),
+    )
+    await user.click(screen.getByRole('button', { name: 'Download BPMN' }))
+    expect(download).toBe('invoice-approval.bpmn')
+    await expect(blobs.at(-1)?.text()).resolves.toContain('Process_Blank')
+
+    await user.click(screen.getByRole('button', { name: 'Invoice sample' }))
+    await waitFor(() =>
+      expect(String(modeler.importXML.mock.lastCall?.[0])).toContain('Process_InvoiceApproval'),
+    )
+    await user.click(screen.getByRole('button', { name: 'Download BPMN' }))
+    expect(download).toBe('invoice-approval.bpmn')
+    await expect(blobs.at(-1)?.text()).resolves.toContain('Process_InvoiceApproval')
+  })
+
   it('AC-STATE-1: a model edit clears a previous validation result', async () => {
     const { user, modeler } = await renderReady()
     await user.click(screen.getByRole('button', { name: 'Validate' }))
@@ -709,6 +894,8 @@ describe('App', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Diagram gotowy')
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Zatwierdzanie faktury')
     expect(screen.getByRole('button', { name: 'Dopasuj' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Nowy diagram' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Przykład faktury' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sprawdź' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Pobierz BPMN' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Kontrola struktury' })).toBeInTheDocument()

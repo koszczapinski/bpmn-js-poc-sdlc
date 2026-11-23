@@ -65,9 +65,25 @@ function InvoiceApp() {
             type="button"
             variant="outline"
             disabled={!ready}
+            onClick={() => void diagram.newDiagram()}
+          >
+            {t('toolbar.new')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!ready}
             onClick={() => fileInputRef.current?.click()}
           >
             {t('toolbar.open')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!ready}
+            onClick={() => void diagram.openInvoiceSample()}
+          >
+            {t('toolbar.invoiceSample')}
           </Button>
           <Button
             type="button"
