@@ -39,11 +39,11 @@ Automatic approval and archive are service tasks because no person performs them
 
 **AC-FLOW-1.** Given the bundled XML, when it is parsed, then the process id, name, nodes, and sequence flows match the table above, `isExecutable` is false, the non-default flows carry the `invoiceValid == false` and `amount > 1000` conditions, and every label in the diagram is English (the interface language never changes the diagram).
 
-**AC-FLOW-2.** Given the app has just opened, when the modeler finishes starting, then it has imported that same XML and fitted the viewport. The bundled XML is only the starting diagram; opening a file later replaces it (AC-FLOW-5).
+**AC-FLOW-2.** Given the app has just opened, when the modeler finishes starting, then it has imported that same XML and fitted the viewport. There is no Prompt field. The bundled XML is only the starting diagram; opening a file later replaces it (AC-FLOW-5), New diagram replaces it with a blank process (AC-FLOW-8), and Invoice sample imports it again (AC-FLOW-9).
 
 **AC-FLOW-3.** Given a selected element, when the panel renders, then it shows the id, a readable type, and the name from the modeler event. Given the user commits a new name with Enter or by leaving the field, when the modeler is updated, then `modeling.updateProperties` is called with that id and name. The panel does not keep its own copy of that name; it changes when `element.changed` reports the modeler's element. A label selection follows the label's target element.
 
-**AC-FLOW-4.** Given the modeler can save XML, when the user downloads, then the browser is given a file named `invoice-approval.bpmn` whose contents are the XML returned by the modeler at that moment. The download is not kept as a second diagram.
+**AC-FLOW-4.** Given the modeler can save XML, when the user downloads, then the browser is given a file named `invoice-approval.bpmn` whose contents are the XML returned by the modeler at that moment. The download is not kept as a second diagram. The name stays `invoice-approval.bpmn` after New diagram and after Invoice sample.
 
 **AC-FLOW-5.** Given the diagram is ready, when the user chooses a local file with Open BPMN, then the file's text is imported into the modeler, the new diagram replaces the current one, and the viewport is fitted. The selection is cleared, a shown check result is cleared and the panel says `Not checked yet.`, and Undo and Redo are disabled because the opened file starts a new history. Choosing the same file twice opens it twice. Download (AC-FLOW-4) still returns whatever the modeler holds, under the name `invoice-approval.bpmn`.
 
@@ -51,7 +51,11 @@ Automatic approval and archive are service tasks because no person performs them
 
 **AC-FLOW-7.** Given the diagram is ready, when the toolbar renders, then it has Undo and Redo buttons. Each is enabled only when the modeler's command stack has something to undo or redo, and that is read again whenever the modeler emits `commandStack.changed` and after an import. Given the user clicks Undo or Redo, when the modeler is updated, then the command stack is asked to undo or redo once, and the selection panel follows the modeler's `element.changed` event. The panel keeps no copy of the history.
 
-**AC-STATE-1.** Given Validate has reported a result, when the modeler emits `commandStack.changed` because the diagram was edited (including undo and redo), or a file is opened (AC-FLOW-5), then that result is cleared and the panel says `Not checked yet.` Findings are a check of the modeler at one moment, not a stored process model.
+**AC-FLOW-8.** Given the modeler is not ready, when the toolbar renders, then New diagram is disabled. Given the diagram is ready, when the toolbar renders, then New diagram is enabled, beside Open BPMN. The label is `New diagram` in English and `Nowy diagram` in Polish. Given the user chooses New diagram, even when the open diagram has edits, then the modeler imports a blank process without asking for confirmation. The blank process is one process, `Process_Blank`, with `isExecutable` false and an empty diagram plane: no flow nodes, no sequence flows, no start event, and no shapes or edges. The viewport is fitted. The selection is cleared. A shown check result is cleared and the panel says `Not checked yet.` Undo and Redo are disabled because the import starts a new history, so Undo cannot restore the previous diagram. The interface language and the theme stay. Token simulation ends (AC-SIM-1). There is still no Prompt field.
+
+**AC-FLOW-9.** Given the modeler is not ready, when the toolbar renders, then Invoice sample is disabled. Given the diagram is ready, when the toolbar renders, then Invoice sample is enabled, beside Open BPMN. The label is `Invoice sample` in English and `Przykład faktury` in Polish. Given the user chooses Invoice sample, then the modeler re-imports the bundled invoice flowchart the same way Open BPMN imports a file: the viewport is fitted, the selection is cleared, a shown check result is cleared and the panel says `Not checked yet.`, undo history starts over, and token simulation ends. Choosing Invoice sample while that diagram is already open imports it again. There is no Prompt field.
+
+**AC-STATE-1.** Given Validate has reported a result, when the modeler emits `commandStack.changed` because the diagram was edited (including undo and redo), or a file is opened (AC-FLOW-5), or New diagram or Invoice sample imports a diagram (AC-FLOW-8, AC-FLOW-9), then that result is cleared and the panel says `Not checked yet.` Findings are a check of the modeler at one moment, not a stored process model.
 
 ### Validation
 
@@ -72,6 +76,8 @@ The validator receives the parsed model, not XML and not a bpmn-js element. The 
 **AC-VAL-7.** Given validation returned a finding with an element id, when the user activates that finding, then the modeler selects that id, adds the `validation-focus` marker, and scrolls to it. Given the id is not on the canvas, when the finding is activated, then the panel says the element is not on the current diagram and does not select anything. A process-level finding selects nothing.
 
 **AC-VAL-8.** Given the structure panel is visible, when the user has or has not run Validate, then the panel states that the rules are not a BPMN 2.0 schema check or a process engine. A pass never implies full BPMN compliance or executability.
+
+**AC-VAL-9.** Given the blank process from New diagram is what the modeler returns, when the user clicks Validate, then the only findings are a missing start (`The process has no start event.`) and a missing end (`The process has no end event.`).
 
 ### XML adapter
 
@@ -129,7 +135,7 @@ The interface is built from shadcn/ui components and has two themes: light (defa
 
 ### Interactive simulation, visual export, and canvas navigation
 
-**AC-SIM-1.** Given the modeler is active, when the user toggles the Simulation button, then `bpmn-js-token-simulation` is toggled on the canvas. When active, interactive execution tokens can be stepped through the invoice approval flow. Turning simulation on does not re-import the diagram or change its elements. Given token simulation is on, when Open BPMN successfully imports a file, then simulation ends and the toolbar shows Simulation. Given token simulation is on, when Open BPMN rejects a file, then the diagram that was open stays, the shown check result stays, and the toolbar still shows Stop simulation.
+**AC-SIM-1.** Given the modeler is active, when the user toggles the Simulation button, then `bpmn-js-token-simulation` is toggled on the canvas. When active, interactive execution tokens can be stepped through the invoice approval flow. Turning simulation on does not re-import the diagram or change its elements. Given token simulation is on, when Open BPMN, New diagram, or Invoice sample successfully imports, then simulation ends and the toolbar shows Simulation. Given token simulation is on, when Open BPMN rejects a file, then the diagram that was open stays, the shown check result stays, and the toolbar still shows Stop simulation.
 
 **AC-SVG-1.** Given a diagram is loaded on the canvas, when the user triggers SVG export, then the editor extracts the diagram SVG via `saveSVG()` and triggers a file download named `invoice-approval.svg`.
 

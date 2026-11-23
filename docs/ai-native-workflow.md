@@ -42,6 +42,8 @@ CI does not deploy and does not start a database or browser service.
 | AC-FLOW-5  | `src/App.test.tsx`                                            |
 | AC-FLOW-6  | `src/App.test.tsx`                                            |
 | AC-FLOW-7  | `src/App.test.tsx`                                            |
+| AC-FLOW-8  | `src/App.test.tsx`                                            |
+| AC-FLOW-9  | `src/App.test.tsx`                                            |
 | AC-STATE-1 | `src/App.test.tsx`                                            |
 | AC-VAL-1   | `src/domain/validateProcess.test.ts`                          |
 | AC-VAL-2   | `src/domain/validateProcess.test.ts`                          |
@@ -51,6 +53,7 @@ CI does not deploy and does not start a database or browser service.
 | AC-VAL-6   | `src/adapters/invoiceApprovalXml.test.ts`, `src/App.test.tsx` |
 | AC-VAL-7   | `src/App.test.tsx`                                            |
 | AC-VAL-8   | `src/App.test.tsx`                                            |
+| AC-VAL-9   | `src/App.test.tsx`                                            |
 | AC-PARSE-1 | `src/adapters/parseBpmnXml.test.ts`                           |
 | AC-PARSE-2 | `src/adapters/parseBpmnXml.test.ts`                           |
 | AC-PARSE-3 | `src/adapters/parseBpmnXml.test.ts`                           |

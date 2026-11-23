@@ -7,7 +7,7 @@ import {
   type SelectedElement,
 } from '../adapters/bpmnEditor'
 import { downloadTextFile } from '../adapters/downloadTextFile'
-import { INVOICE_APPROVAL_XML, INVOICE_DOWNLOAD_NAME } from '../bpmn/sample'
+import { BLANK_PROCESS_XML, INVOICE_APPROVAL_XML, INVOICE_DOWNLOAD_NAME } from '../bpmn/sample'
 import { validateProcess } from '../domain/validateProcess'
 import type { Finding } from '../domain/types'
 import type { MessageKey } from '../i18n/messages'
@@ -36,6 +36,8 @@ export interface InvoiceDiagram {
   download: () => Promise<void>
   downloadSvg: () => Promise<void>
   openFile: (file: File) => Promise<void>
+  newDiagram: () => Promise<void>
+  openInvoiceSample: () => Promise<void>
   fit: () => void
   zoomIn: () => void
   zoomOut: () => void
@@ -170,7 +172,7 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     }
   }
 
-  async function openFile(file: File): Promise<void> {
+  async function replaceDiagram(xml: string): Promise<void> {
     const editor = editorRef.current
     if (!editor) {
       setActionError({ key: 'error.modelerNotReady' })
@@ -178,7 +180,7 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     }
 
     try {
-      const result = await editor.replaceXml(await file.text())
+      const result = await editor.replaceXml(xml)
       editor.clearFocus()
       editor.fit()
       setWarnings(result.warnings)
@@ -191,6 +193,29 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     } finally {
       setHistory(editor.history())
     }
+  }
+
+  async function openFile(file: File): Promise<void> {
+    const editor = editorRef.current
+    if (!editor) {
+      setActionError({ key: 'error.modelerNotReady' })
+      return
+    }
+
+    try {
+      await replaceDiagram(await file.text())
+    } catch (error) {
+      setActionError(errorText(error, 'error.openFileFailed'))
+      setHistory(editor.history())
+    }
+  }
+
+  function newDiagram(): Promise<void> {
+    return replaceDiagram(BLANK_PROCESS_XML)
+  }
+
+  function openInvoiceSample(): Promise<void> {
+    return replaceDiagram(INVOICE_APPROVAL_XML)
   }
 
   function fit(): void {
@@ -256,6 +281,8 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     download,
     downloadSvg,
     openFile,
+    newDiagram,
+    openInvoiceSample,
     fit,
     zoomIn,
     zoomOut,
