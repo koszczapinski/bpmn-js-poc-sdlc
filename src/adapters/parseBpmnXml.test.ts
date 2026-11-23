@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BpmnParseError, parseBpmnXml } from './parseBpmnXml'
+import { assertImportableFlowchart, BpmnParseError, parseBpmnXml } from './parseBpmnXml'
 
 function prefixed(processBody: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -112,5 +112,77 @@ describe('parseBpmnXml', () => {
     expect(model.id).toBe('Process_First')
     expect(model.nodes.map((node) => node.id)).toEqual(['Start_1', 'Sub_1', 'End_1'])
     expect(model.flows).toHaveLength(2)
+  })
+})
+
+function nestedFlowchart(shapeIds: string[], edgeIds: string[]): string {
+  const shapes = shapeIds
+    .map((id) => `<bpmndi:BPMNShape id="${id}_di" bpmnElement="${id}" />`)
+    .join('\n')
+  const edges = edgeIds
+    .map((id) => `<bpmndi:BPMNEdge id="${id}_di" bpmnElement="${id}" />`)
+    .join('\n')
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI">
+  <process id="Process_Nested">
+    <subProcess id="Sub_Outer">
+      <subProcess id="Sub_Inner">
+        <userTask id="Task_Deep" />
+        <sequenceFlow id="Flow_Deep" sourceRef="Task_Deep" targetRef="Task_Deep" />
+      </subProcess>
+    </subProcess>
+  </process>
+  <bpmndi:BPMNDiagram id="Diagram_1">
+    <bpmndi:BPMNPlane id="Plane_1" bpmnElement="Process_Nested">
+      ${shapes}
+      ${edges}
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>`
+}
+
+describe('assertImportableFlowchart', () => {
+  it('refuses a flow node or sequence flow nested in a subprocess when its diagram element is missing', () => {
+    expect(() =>
+      assertImportableFlowchart(nestedFlowchart(['Sub_Outer', 'Sub_Inner'], ['Flow_Deep'])),
+    ).toThrow('Flow node "Task_Deep" has no BPMN shape.')
+
+    expect(() =>
+      assertImportableFlowchart(nestedFlowchart(['Sub_Outer', 'Sub_Inner', 'Task_Deep'], [])),
+    ).toThrow('Sequence flow "Flow_Deep" has no BPMN edge.')
+  })
+
+  it('accepts nested flow nodes and sequence flows that each have a diagram element', () => {
+    expect(() =>
+      assertImportableFlowchart(
+        nestedFlowchart(['Sub_Outer', 'Sub_Inner', 'Task_Deep'], ['Flow_Deep']),
+      ),
+    ).not.toThrow()
+  })
+
+  it('refuses a document that is not exactly one process', () => {
+    expect(() =>
+      assertImportableFlowchart(`<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL">
+  <collaboration id="Collaboration_1" />
+</definitions>`),
+    ).toThrow('The document does not contain a BPMN process.')
+
+    expect(() =>
+      assertImportableFlowchart(`<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL">
+  <process id="Process_One" />
+  <process id="Process_Two" />
+</definitions>`),
+    ).toThrow('The document contains more than one BPMN process.')
+  })
+
+  it('accepts a blank process', () => {
+    expect(() =>
+      assertImportableFlowchart(`<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL">
+  <process id="Process_Blank" isExecutable="false" />
+</definitions>`),
+    ).not.toThrow()
   })
 })

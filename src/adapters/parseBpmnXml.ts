@@ -113,24 +113,10 @@ function optionalName(value: string | null): string | undefined {
   return trimmed ? trimmed : undefined
 }
 
-/** Exactly one process, and that process has no flow nodes and no sequence flows. */
-export function isBlankProcessDocument(xml: string): boolean {
-  try {
-    const processes = localElements(parseDocument(xml), 'process')
-    const process = processes.length === 1 ? processes[0] : undefined
-    if (!process) return false
-    return !Array.from(process.children).some((child) => {
-      const localName = child.localName
-      return localName === 'sequenceFlow' || isFlowNodeType(localName)
-    })
-  } catch {
-    return false
-  }
-}
-
 /**
  * Refuses a flowchart the prepared prompt must not import: not exactly one
- * process, a direct flow node without a shape, or a direct sequence flow without an edge.
+ * process, a flow node without a shape, or a sequence flow without an edge.
+ * Nodes and flows nested in a subprocess count.
  */
 export function assertImportableFlowchart(xml: string): void {
   const document = parseDocument(xml)
@@ -146,19 +132,7 @@ export function assertImportableFlowchart(xml: string): void {
 
   const flowNodeIds: string[] = []
   const flowIds: string[] = []
-  for (const child of Array.from(process.children)) {
-    const localName = child.localName
-    if (localName === 'sequenceFlow') {
-      const id = child.getAttribute('id')?.trim()
-      if (!id) throw new BpmnParseError('A sequence flow is missing an id.')
-      flowIds.push(id)
-      continue
-    }
-    if (!isFlowNodeType(localName)) continue
-    const id = child.getAttribute('id')?.trim()
-    if (!id) throw new BpmnParseError(`A ${localName} element is missing an id.`)
-    flowNodeIds.push(id)
-  }
+  collectFlowchartElements(process, flowNodeIds, flowIds)
 
   const shapes = new Set(diagramElementIds(document, 'BPMNShape'))
   const edges = new Set(diagramElementIds(document, 'BPMNEdge'))
@@ -167,6 +141,28 @@ export function assertImportableFlowchart(xml: string): void {
   }
   for (const id of flowIds) {
     if (!edges.has(id)) throw new BpmnParseError(`Sequence flow "${id}" has no BPMN edge.`)
+  }
+}
+
+function collectFlowchartElements(
+  element: Element,
+  flowNodeIds: string[],
+  flowIds: string[],
+): void {
+  for (const child of Array.from(element.children)) {
+    const localName = child.localName
+    if (localName === 'sequenceFlow') {
+      const id = child.getAttribute('id')?.trim()
+      if (!id) throw new BpmnParseError('A sequence flow is missing an id.')
+      flowIds.push(id)
+      continue
+    }
+    if (isFlowNodeType(localName)) {
+      const id = child.getAttribute('id')?.trim()
+      if (!id) throw new BpmnParseError(`A ${localName} element is missing an id.`)
+      flowNodeIds.push(id)
+    }
+    collectFlowchartElements(child, flowNodeIds, flowIds)
   }
 }
 

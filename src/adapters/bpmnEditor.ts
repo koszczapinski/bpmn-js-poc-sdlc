@@ -10,6 +10,7 @@ import lintModule from 'bpmn-js-bpmnlint'
 import tokenSimulationModule from 'bpmn-js-token-simulation'
 import minimapModule from 'diagram-js-minimap/dist/index.esm.js'
 import zeebeModdle from 'zeebe-bpmn-moddle/resources/zeebe.json'
+import { isFlowNodeType } from '../domain/flowNodes'
 
 const FOCUS_MARKER = 'validation-focus'
 
@@ -32,6 +33,8 @@ export interface BpmnEditor {
   replaceXml(xml: string): Promise<{ warnings: string[] }>
   saveXml(): Promise<string>
   saveSvg(): Promise<string>
+  /** Exactly one process, with no flow nodes and no sequence flows. */
+  isBlank(): boolean
   onSelectionChanged(handler: (element: SelectedElement | null) => void): () => void
   onModelChanged(handler: () => void): () => void
   onSimulationToggled(handler: (active: boolean) => void): () => void
@@ -211,6 +214,16 @@ class BpmnJsEditor implements BpmnEditor {
     const result = await this.modeler.saveSVG()
     if (!result.svg) throw new Error('The modeler did not return SVG.')
     return result.svg
+  }
+
+  isBlank(): boolean {
+    const definitions = this.modeler.getDefinitions() as DiagramDefinitions | undefined
+    const processes = (definitions?.rootElements ?? []).filter(
+      (element) => element.$type === 'bpmn:Process',
+    )
+    if (processes.length !== 1) return false
+    const flowElements = processes[0]?.flowElements ?? []
+    return !Array.from(flowElements).some((element) => hasFlowContent(element.$type))
   }
 
   onSelectionChanged(handler: (element: SelectedElement | null) => void): () => void {
@@ -489,6 +502,20 @@ function readElement(element: ElementLike | undefined): SelectedElement | null {
     jobType,
     formId,
   }
+}
+
+interface DiagramDefinitions {
+  rootElements?: Array<{
+    $type?: string
+    flowElements?: Array<{ $type?: string }>
+  }>
+}
+
+function hasFlowContent(type: string | undefined): boolean {
+  if (!type) return false
+  const name = type.includes(':') ? type.slice(type.lastIndexOf(':') + 1) : type
+  const local = `${name.charAt(0).toLowerCase()}${name.slice(1)}`
+  return local === 'sequenceFlow' || isFlowNodeType(local)
 }
 
 function warningText(warning: unknown): string {
