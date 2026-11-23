@@ -8,9 +8,16 @@ import { useI18n } from '../i18n/I18nContext'
 interface PropertiesPanelProps {
   element: SelectedElement | null
   onRename: (id: string, name: string) => void
+  onUpdateJobType: (id: string, jobType: string) => void
+  onUpdateFormId: (id: string, formId: string) => void
 }
 
-export function PropertiesPanel({ element, onRename }: PropertiesPanelProps) {
+export function PropertiesPanel({
+  element,
+  onRename,
+  onUpdateJobType,
+  onUpdateFormId,
+}: PropertiesPanelProps) {
   const { t, typeLabel } = useI18n()
   return (
     <section aria-labelledby="selection-heading">
@@ -42,6 +49,20 @@ export function PropertiesPanel({ element, onRename }: PropertiesPanelProps) {
                 element={element}
                 onRename={onRename}
               />
+              {element.type === 'bpmn:ServiceTask' && (
+                <JobTypeField
+                  key={`${element.id}:jobType:${element.jobType ?? ''}`}
+                  element={element}
+                  onUpdateJobType={onUpdateJobType}
+                />
+              )}
+              {element.type === 'bpmn:UserTask' && (
+                <FormIdField
+                  key={`${element.id}:formId:${element.formId ?? ''}`}
+                  element={element}
+                  onUpdateFormId={onUpdateFormId}
+                />
+              )}
             </>
           ) : (
             <p className="text-sm text-muted-foreground">{t('selection.empty')}</p>
@@ -49,6 +70,80 @@ export function PropertiesPanel({ element, onRename }: PropertiesPanelProps) {
         </CardContent>
       </Card>
     </section>
+  )
+}
+
+function JobTypeField({
+  element,
+  onUpdateJobType,
+}: {
+  element: SelectedElement
+  onUpdateJobType: (id: string, jobType: string) => void
+}) {
+  const { t } = useI18n()
+  const [draft, setDraft] = useState(element.jobType ?? '')
+
+  function commit() {
+    const next = draft.trim()
+    if (next === (element.jobType ?? '')) return
+    onUpdateJobType(element.id, next)
+  }
+
+  return (
+    <div className="mt-3 flex flex-col gap-1.5">
+      <Label className="text-[0.68rem] tracking-wider text-muted-foreground uppercase">
+        {t('selection.jobType')}
+        <Input
+          className="mt-1.5 font-mono text-sm tracking-normal text-foreground normal-case"
+          value={draft}
+          placeholder={t('selection.jobTypePlaceholder')}
+          spellCheck={false}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur()
+          }}
+        />
+      </Label>
+      <span className="text-sm text-muted-foreground">{t('selection.jobTypeHint')}</span>
+    </div>
+  )
+}
+
+function FormIdField({
+  element,
+  onUpdateFormId,
+}: {
+  element: SelectedElement
+  onUpdateFormId: (id: string, formId: string) => void
+}) {
+  const { t } = useI18n()
+  const [draft, setDraft] = useState(element.formId ?? '')
+
+  function commit() {
+    const next = draft.trim()
+    if (next === (element.formId ?? '')) return
+    onUpdateFormId(element.id, next)
+  }
+
+  return (
+    <div className="mt-3 flex flex-col gap-1.5">
+      <Label className="text-[0.68rem] tracking-wider text-muted-foreground uppercase">
+        {t('selection.formId')}
+        <Input
+          className="mt-1.5 font-mono text-sm tracking-normal text-foreground normal-case"
+          value={draft}
+          placeholder={t('selection.formIdPlaceholder')}
+          spellCheck={false}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur()
+          }}
+        />
+      </Label>
+      <span className="text-sm text-muted-foreground">{t('selection.formIdHint')}</span>
+    </div>
   )
 }
 
@@ -63,9 +158,8 @@ function NameField({
   const [draft, setDraft] = useState(element.name)
 
   function commit() {
-    const next = draft.trim()
-    if (next === element.name) return
-    onRename(element.id, next)
+    if (draft === element.name) return
+    onRename(element.id, draft)
   }
 
   return (
@@ -75,7 +169,7 @@ function NameField({
         <Input
           className="mt-1.5 text-sm tracking-normal text-foreground normal-case"
           value={draft}
-          spellCheck={false}
+          placeholder={t('selection.empty')}
           onChange={(event) => setDraft(event.target.value)}
           onBlur={commit}
           onKeyDown={(event) => {

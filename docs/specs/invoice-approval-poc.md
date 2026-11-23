@@ -119,4 +119,24 @@ The interface is built from shadcn/ui components and has two themes: light (defa
 
 **AC-UI-2.** Given import fails, when the error is caught, then a status says the diagram could not be opened and an alert shows the error message.
 
+### Camunda 8 (Zeebe) integration
+
+**AC-ZEEBE-1.** Given a Service Task is selected, when the properties panel renders, then it displays the `Job Type` field populated with `zeebe:taskDefinition`'s type if present. When the user enters and commits a new job type, then `zeebe:taskDefinition` is updated via moddle properties inside the command stack, allowing undo and redo.
+
+**AC-ZEEBE-2.** Given the diagram is saved or downloaded after configuring a job type on a Service Task, then the resulting XML contains `<bpmn:extensionElements><zeebe:taskDefinition type="..." /></bpmn:extensionElements>` and declares `xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"`.
+
+**AC-ZEEBE-3.** Given a User Task is selected, when the properties panel renders, then it displays the `Form ID` field populated with `zeebe:formDefinition`'s formId if present. When the user enters and commits a new formId, then `zeebe:formDefinition` is updated via moddle properties inside the command stack, allowing undo and redo.
+
+### Interactive simulation, visual export, and canvas navigation
+
+**AC-SIM-1.** Given the modeler is active, when the user toggles the Simulation button, then `bpmn-js-token-simulation` is toggled on the canvas. When active, interactive execution tokens can be stepped through the invoice approval flow.
+
+**AC-SVG-1.** Given a diagram is loaded on the canvas, when the user triggers SVG export, then the editor extracts the diagram SVG via `saveSVG()` and triggers a file download named `invoice-approval.svg`.
+
+**AC-NAV-1.** Given the diagram canvas, then floating viewport controls support zoom in, zoom out, and fit to viewport, and a minimap provides spatial orientation across the diagram.
+
+### Live diagram linting
+
+**AC-LINT-1.** Given the modeler is started, then `bpmn-js-bpmnlint` is active with a Zeebe Service Task rule. When a Service Task lacks a non-empty `zeebe:taskDefinition` type, then the linter flags the element and displays an overlay on the canvas. When a valid job type is provided, the issue marker on that element disappears.
+
 **AC-ARCH-1.** Given the source tree, when the architecture test reads it, then `src/domain` has no React, bpmn-js, diagram-js, `src/i18n`, or DOM parser usage, `DOMParser` appears only in the XML adapter, and bpmn-js imports appear only in the modeler adapter and `src/main.tsx`.

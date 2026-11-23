@@ -90,6 +90,14 @@ function InvoiceApp() {
           </Button>
           <Button
             type="button"
+            variant={diagram.isSimulation ? 'default' : 'outline'}
+            disabled={!ready}
+            onClick={diagram.toggleSimulation}
+          >
+            {diagram.isSimulation ? t('toolbar.simulationActive') : t('toolbar.simulation')}
+          </Button>
+          <Button
+            type="button"
             disabled={!ready || diagram.validation.status === 'running'}
             onClick={() => void diagram.validate()}
           >
@@ -104,6 +112,14 @@ function InvoiceApp() {
             onClick={() => void diagram.download()}
           >
             {t('toolbar.download')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!ready}
+            onClick={() => void diagram.downloadSvg()}
+          >
+            {t('toolbar.exportSvg')}
           </Button>
         </div>
       </header>
@@ -140,17 +156,60 @@ function InvoiceApp() {
       )}
 
       <div className="workspace">
-        <section className="canvas-shell" aria-label={t('canvas.label')}>
+        <section className="canvas-shell relative" aria-label={t('canvas.label')}>
           <div ref={containerRef} className="canvas-host" />
           {diagram.phase === 'loading' && (
             <div className="overlay">
               <p>{t('status.loading')}</p>
             </div>
           )}
+          <div className="absolute right-4 bottom-10 z-10 flex flex-col gap-1 rounded-md border bg-card/95 p-1 shadow-md backdrop-blur">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-base leading-none"
+              aria-label={t('canvas.zoomIn')}
+              title={t('canvas.zoomIn')}
+              onClick={diagram.zoomIn}
+              disabled={!ready}
+            >
+              +
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-base leading-none"
+              aria-label={t('canvas.zoomOut')}
+              title={t('canvas.zoomOut')}
+              onClick={diagram.zoomOut}
+              disabled={!ready}
+            >
+              −
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-1.5 text-xs font-medium"
+              aria-label={t('canvas.zoomFit')}
+              title={t('canvas.zoomFit')}
+              onClick={diagram.fit}
+              disabled={!ready}
+            >
+              Fit
+            </Button>
+          </div>
           <p className="canvas-caption">{t('canvas.caption')}</p>
         </section>
         <aside className="sidebar">
-          <PropertiesPanel element={diagram.selected} onRename={diagram.rename} />
+          <PropertiesPanel
+            element={diagram.selected}
+            onRename={diagram.rename}
+            onUpdateJobType={diagram.updateJobType}
+            onUpdateFormId={diagram.updateFormId}
+          />
           <ValidationPanel
             validation={diagram.validation}
             activeFindingId={diagram.activeFindingId}

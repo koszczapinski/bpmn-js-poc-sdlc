@@ -27,10 +27,18 @@ const { modelerState, MockModeler } = vi.hoisted(() => {
       return { warnings: result.warnings ?? [] }
     })
     saveXML = vi.fn(async () => ({ xml: modelerState.saveXml ?? this.xml }))
+    saveSVG = vi.fn(async () => ({ svg: '<svg xmlns="http://www.w3.org/2000/svg"></svg>' }))
     destroy = vi.fn()
     selection = {
       select: vi.fn(),
       get: vi.fn(() => [] as unknown[]),
+    }
+    toggleMode = {
+      _active: false,
+      toggleMode: vi.fn((active?: boolean) => {
+        this.toggleMode._active = typeof active === 'boolean' ? active : !this.toggleMode._active
+        this.emit('tokenSimulation.toggleMode', { active: this.toggleMode._active })
+      }),
     }
     canvas = {
       addMarker: vi.fn(),
@@ -54,10 +62,30 @@ const { modelerState, MockModeler } = vi.hoisted(() => {
     registry = {
       get: vi.fn((id: string) => {
         if (modelerState.missingIds.has(id)) return undefined
-        return { id, type: 'bpmn:UserTask', businessObject: { name: 'Element' } }
+        const isService = id.includes('AutoApprove') || id.includes('Archive')
+        return {
+          id,
+          type: isService ? 'bpmn:ServiceTask' : 'bpmn:UserTask',
+          businessObject: { name: 'Element', extensionElements: { values: [] } },
+        }
       }),
     }
-    modeling = { updateProperties: vi.fn() }
+    modeling = {
+      updateProperties: vi.fn(),
+      updateModdleProperties: vi.fn(),
+    }
+    bpmnFactory = {
+      create: vi.fn((type: string, props?: Record<string, unknown>) => ({
+        $type: type,
+        ...props,
+      })),
+    }
+    moddle = {
+      create: vi.fn((type: string, props?: Record<string, unknown>) => ({
+        $type: type,
+        ...props,
+      })),
+    }
     commandStack = {
       canUndo: vi.fn(() => this.history.canUndo),
       canRedo: vi.fn(() => this.history.canRedo),
@@ -91,6 +119,9 @@ const { modelerState, MockModeler } = vi.hoisted(() => {
       if (service === 'elementRegistry') return this.registry
       if (service === 'modeling') return this.modeling
       if (service === 'commandStack') return this.commandStack
+      if (service === 'bpmnFactory') return this.bpmnFactory
+      if (service === 'moddle') return this.moddle
+      if (service === 'toggleMode') return this.toggleMode
       throw new Error(`Unexpected service ${service}`)
     }
 
@@ -273,6 +304,133 @@ describe('App', () => {
       })
     })
     expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('Po poprawce')
+  })
+
+  it('AC-ZEEBE-1: ServiceTask selection displays Job Type and committing updates moddle properties', async () => {
+    const { user, modeler } = await renderReady()
+    act(() => {
+      modeler.emit('selection.changed', {
+        newSelection: [
+          {
+            id: 'Task_AutoApprove',
+            type: 'bpmn:ServiceTask',
+            businessObject: {
+              name: 'Automatic approval',
+              extensionElements: {
+                values: [{ $type: 'zeebe:TaskDefinition', type: 'auto-approve-service' }],
+              },
+            },
+          },
+        ],
+      })
+    })
+
+    expect(screen.getByText('Task_AutoApprove')).toBeInTheDocument()
+    expect(screen.getByText('Service task')).toBeInTheDocument()
+    const jobType = screen.getByRole('textbox', { name: /Job Type/i })
+    expect(jobType).toHaveValue('auto-approve-service')
+
+    await user.clear(jobType)
+    await user.type(jobType, 'custom-approval-worker')
+    await user.keyboard('{Enter}')
+
+    expect(modeler.modeling.updateModdleProperties).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'Task_AutoApprove' }),
+      expect.anything(),
+      expect.objectContaining({
+        values: expect.arrayContaining([
+          expect.objectContaining({ type: 'custom-approval-worker' }),
+        ]),
+      }),
+    )
+  })
+
+  it('AC-ZEEBE-3: UserTask selection displays Form ID and committing updates moddle properties', async () => {
+    const { user, modeler } = await renderReady()
+    act(() => {
+      modeler.emit('selection.changed', {
+        newSelection: [
+          {
+            id: 'Task_ManagerApprove',
+            type: 'bpmn:UserTask',
+            businessObject: {
+              name: 'Manager approval',
+              extensionElements: {
+                values: [{ $type: 'zeebe:FormDefinition', formId: 'Form_ManagerApproval' }],
+              },
+            },
+          },
+        ],
+      })
+    })
+
+    expect(screen.getByText('Task_ManagerApprove')).toBeInTheDocument()
+    expect(screen.getByText('User task')).toBeInTheDocument()
+    const formId = screen.getByRole('textbox', { name: /Form ID/i })
+    expect(formId).toHaveValue('Form_ManagerApproval')
+
+    await user.clear(formId)
+    await user.type(formId, 'Form_CustomReview')
+    await user.keyboard('{Enter}')
+
+    expect(modeler.modeling.updateModdleProperties).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'Task_ManagerApprove' }),
+      expect.anything(),
+      expect.objectContaining({
+        values: expect.arrayContaining([expect.objectContaining({ formId: 'Form_CustomReview' })]),
+      }),
+    )
+  })
+
+  it('AC-SIM-1: toggling simulation switches token simulation state', async () => {
+    const { user, modeler } = await renderReady()
+    const simButton = screen.getByRole('button', { name: 'Simulation' })
+    expect(simButton).toBeInTheDocument()
+
+    await user.click(simButton)
+    expect(modeler.toggleMode.toggleMode).toHaveBeenCalledTimes(1)
+    expect(await screen.findByRole('button', { name: 'Stop simulation' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Stop simulation' }))
+    expect(modeler.toggleMode.toggleMode).toHaveBeenCalledTimes(2)
+    expect(await screen.findByRole('button', { name: 'Simulation' })).toBeInTheDocument()
+  })
+
+  it('AC-SVG-1: downloads the SVG currently returned by the modeler', async () => {
+    const blobs: Blob[] = []
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => {
+      blobs.push(blob as Blob)
+      return 'blob:svg-invoice'
+    })
+    let download = ''
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      download = this.download
+    })
+
+    const { user } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'Export SVG' }))
+
+    expect(download).toBe('invoice-approval.svg')
+    expect(blobs).toHaveLength(1)
+    await expect(blobs[0]?.text()).resolves.toContain('<svg')
+  })
+
+  it('AC-NAV-1: floating zoom and fit controls manipulate canvas zoom and fit', async () => {
+    const { user, modeler } = await renderReady()
+    const zoomIn = screen.getByRole('button', { name: 'Zoom in' })
+    const zoomOut = screen.getByRole('button', { name: 'Zoom out' })
+    const zoomFit = screen.getByRole('button', { name: 'Fit diagram' })
+
+    await user.click(zoomIn)
+    expect(modeler.canvas.zoom).toHaveBeenCalledWith(1.25)
+
+    await user.click(zoomOut)
+    expect(modeler.canvas.zoom).toHaveBeenCalledWith(0.8)
+
+    await user.click(zoomFit)
+    expect(modeler.canvas.zoom).toHaveBeenCalledWith('fit-viewport')
   })
 
   it('AC-FLOW-7: Undo and Redo follow the modeler command stack', async () => {

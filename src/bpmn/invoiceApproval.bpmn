@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_InvoiceApproval" targetNamespace="http://example.com/invoice-approval" exporter="invoice-approval-poc" exporterVersion="1.0">
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_InvoiceApproval" targetNamespace="http://example.com/invoice-approval" exporter="invoice-approval-poc" exporterVersion="1.0">
   <bpmn:process id="Process_InvoiceApproval" name="Invoice approval" isExecutable="false">
     <bpmn:startEvent id="Start_Received" name="Invoice received">
       <bpmn:outgoing>Flow_ToValidation</bpmn:outgoing>
@@ -24,14 +24,23 @@
       <bpmn:outgoing>Flow_Manager</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:serviceTask id="Task_AutoApprove" name="Automatic approval">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="auto-approve-service" />
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_Auto</bpmn:incoming>
       <bpmn:outgoing>Flow_AutoArchive</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:userTask id="Task_ManagerApprove" name="Manager approval">
+      <bpmn:extensionElements>
+        <zeebe:formDefinition formId="Form_ManagerApproval" />
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_Manager</bpmn:incoming>
       <bpmn:outgoing>Flow_ManagerArchive</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:serviceTask id="Task_Archive" name="Archive invoice">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="archive-service" />
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_AutoArchive</bpmn:incoming>
       <bpmn:incoming>Flow_ManagerArchive</bpmn:incoming>
       <bpmn:outgoing>Flow_ToEnd</bpmn:outgoing>

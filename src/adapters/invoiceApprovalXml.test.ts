@@ -61,4 +61,49 @@ describe('bundled invoice approval diagram', () => {
     for (const label of labels) expect(label).not.toMatch(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/)
     expect(INVOICE_APPROVAL_XML).not.toMatch(/Walidacja|Faktura|Kwota|Koniec|Zatwierdzenie/)
   })
+
+  it('AC-ZEEBE-2: bundled diagram defines Zeebe namespace and service task definitions', () => {
+    expect(INVOICE_APPROVAL_XML).toContain('xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"')
+    expect(INVOICE_APPROVAL_XML).toContain('<zeebe:taskDefinition type="auto-approve-service"')
+    expect(INVOICE_APPROVAL_XML).toContain('<zeebe:taskDefinition type="archive-service"')
+  })
+
+  it('AC-LINT-1: bundled service tasks satisfy the Zeebe task definition requirement', async () => {
+    const { BpmnModdle } = await import('bpmn-moddle')
+    const zeebeModdle = (await import('zeebe-bpmn-moddle/resources/zeebe.json')).default
+    const moddle = new BpmnModdle({ zeebe: zeebeModdle })
+
+    interface FlowElement {
+      $type: string
+      extensionElements?: {
+        values?: Array<{ $type: string; type?: string }>
+      }
+    }
+
+    interface RootProcess {
+      rootElements?: Array<{
+        flowElements?: FlowElement[]
+      }>
+    }
+
+    const result = await moddle.fromXML(INVOICE_APPROVAL_XML)
+    const root = result.rootElement as RootProcess
+    const process = root.rootElements?.[0]
+    const serviceTasks = (process?.flowElements ?? []).filter(
+      (el) => el.$type === 'bpmn:ServiceTask',
+    )
+
+    expect(serviceTasks.length).toBe(2)
+    for (const task of serviceTasks) {
+      const taskDef = task.extensionElements?.values?.find(
+        (v) => v.$type === 'zeebe:TaskDefinition',
+      )
+      expect(taskDef).toBeDefined()
+      expect(taskDef?.type).toBeTruthy()
+    }
+  })
+
+  it('AC-ZEEBE-3: bundled user tasks support Zeebe form definitions', () => {
+    expect(INVOICE_APPROVAL_XML).toContain('<zeebe:formDefinition formId="Form_ManagerApproval"')
+  })
 })
