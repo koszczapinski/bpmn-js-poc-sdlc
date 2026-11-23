@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,14 +18,37 @@ const { modelerState, MockModeler } = vi.hoisted(() => {
     missingIds: new Set(),
   }
 
+  function definitionsFromXml(xml: string): {
+    rootElements: Array<{ $type: string; flowElements: Array<{ $type: string }> }>
+  } {
+    const parsed = new DOMParser().parseFromString(xml, 'application/xml')
+    const processes = Array.from(parsed.getElementsByTagName('*')).filter(
+      (element) => element.localName === 'process',
+    )
+    return {
+      rootElements: processes.map((process) => ({
+        $type: 'bpmn:Process',
+        flowElements: Array.from(process.children).flatMap((child) => {
+          const localName = child.localName
+          if (!localName) return []
+          return [{ $type: `bpmn:${localName.charAt(0).toUpperCase()}${localName.slice(1)}` }]
+        }),
+      })),
+    }
+  }
+
   class MockModeler {
     static instances: MockModeler[] = []
     xml = ''
+    definitions: {
+      rootElements: Array<{ $type: string; flowElements?: Array<{ $type: string }> }>
+    } = { rootElements: [] }
     private readonly listeners = new Map<string, Set<Listener>>()
     history = { canUndo: false, canRedo: false }
     importXML = vi.fn(async (xml: string) => {
       const result = await modelerState.importImpl(xml)
       this.xml = xml
+      this.definitions = definitionsFromXml(xml)
       this.history = { canUndo: false, canRedo: false }
       return { warnings: result.warnings ?? [] }
     })
@@ -129,6 +154,10 @@ const { modelerState, MockModeler } = vi.hoisted(() => {
     emit(event: string, payload: unknown) {
       for (const callback of this.listeners.get(event) ?? []) callback(payload)
     }
+
+    getDefinitions() {
+      return this.definitions
+    }
   }
 
   return { modelerState, MockModeler }
@@ -217,12 +246,16 @@ const drawnNodeXml = `<?xml version="1.0" encoding="UTF-8"?>
   </bpmn:process>
 </bpmn:definitions>`
 
-const flowOnlyXml = `<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
-  <bpmn:process id="Process_Flow" isExecutable="false">
-    <bpmn:sequenceFlow id="Flow_Only" sourceRef="A" targetRef="B" />
-  </bpmn:process>
-</bpmn:definitions>`
+function processDiagram(flowTypes: string[]) {
+  return {
+    rootElements: [
+      {
+        $type: 'bpmn:Process',
+        flowElements: flowTypes.map((type) => ({ $type: type })),
+      },
+    ],
+  }
+}
 
 const POLISH_PROMPT = 'wygeneruj diagram dla obiegu dokumentów prawnych'
 const ENGLISH_PROMPT = 'generate a diagram for a legal document workflow'
@@ -1130,26 +1163,55 @@ describe('App', () => {
     await user.upload(screen.getByLabelText('BPMN file'), bpmnFile(BLANK_PROCESS_XML, 'blank.bpmn'))
     expect(await screen.findByRole('textbox', { name: 'Prompt' })).toBeInTheDocument()
 
-    modelerState.saveXml = flowOnlyXml
+    const savesBeforeEdit = modeler.saveXML.mock.calls.length
+    // The saved XML still describes a blank process. Blankness follows the modeler.
+    modelerState.saveXml = BLANK_PROCESS_XML
+    modeler.definitions = processDiagram(['bpmn:SequenceFlow'])
     modeler.history = { canUndo: true, canRedo: false }
     act(() => modeler.emit('commandStack.changed', {}))
     await waitFor(() =>
       expect(screen.queryByRole('textbox', { name: 'Prompt' })).not.toBeInTheDocument(),
     )
+    expect(modeler.saveXML).toHaveBeenCalledTimes(savesBeforeEdit)
 
-    modelerState.saveXml = BLANK_PROCESS_XML
+    modeler.definitions = processDiagram([])
+    modelerState.saveXml = drawnNodeXml
     await user.click(screen.getByRole('button', { name: 'Undo' }))
     expect(await screen.findByRole('textbox', { name: 'Prompt' })).toBeInTheDocument()
+    expect(modeler.saveXML).toHaveBeenCalledTimes(savesBeforeEdit)
 
-    modelerState.saveXml = drawnNodeXml
+    modeler.definitions = processDiagram(['bpmn:StartEvent'])
+    modelerState.saveXml = BLANK_PROCESS_XML
     act(() => modeler.emit('commandStack.changed', {}))
     await waitFor(() =>
       expect(screen.queryByRole('textbox', { name: 'Prompt' })).not.toBeInTheDocument(),
     )
+    expect(modeler.saveXML).toHaveBeenCalledTimes(savesBeforeEdit)
 
-    modelerState.saveXml = BLANK_PROCESS_XML
+    modeler.definitions = processDiagram([])
     act(() => modeler.emit('commandStack.changed', {}))
     expect(await screen.findByRole('textbox', { name: 'Prompt' })).toBeInTheDocument()
+
+    modeler.definitions = {
+      rootElements: [
+        { $type: 'bpmn:Process', flowElements: [] },
+        { $type: 'bpmn:Process', flowElements: [] },
+      ],
+    }
+    modelerState.saveXml = BLANK_PROCESS_XML
+    act(() => modeler.emit('commandStack.changed', {}))
+    await waitFor(() =>
+      expect(screen.queryByRole('textbox', { name: 'Prompt' })).not.toBeInTheDocument(),
+    )
+    expect(modeler.saveXML).toHaveBeenCalledTimes(savesBeforeEdit)
+  })
+
+  it('AC-PROMPT-1: the prompt bar stays to the right of a two-column palette', () => {
+    const css = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8')
+    const rule = css.match(/\.prompt-bar\s*\{[^}]*\}/)?.[0] ?? ''
+    expect(rule).toContain('right:')
+    expect(rule).not.toContain('left:')
+    expect(rule).toContain('106px')
   })
 
   it('AC-PROMPT-2: an empty or whitespace Prompt does not submit', async () => {
@@ -1310,14 +1372,16 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Invoice sample' }))
     await waitFor(() => expect(modeler.xml).toContain('Process_InvoiceApproval'))
     expectNoPrompt()
-    modelerState.saveXml = BLANK_PROCESS_XML
+    modeler.definitions = processDiagram([])
+    modelerState.saveXml = drawnNodeXml
     act(() => modeler.emit('commandStack.changed', {}))
     expect(await screen.findByRole('textbox', { name: 'Prompt' })).toHaveValue('')
 
     await user.type(screen.getByRole('textbox', { name: 'Prompt' }), ENGLISH_PROMPT)
     await user.click(screen.getByRole('button', { name: 'Generate diagram' }))
     await waitFor(() => expect(modeler.xml).toContain('Process_LegalDocuments'))
-    modelerState.saveXml = BLANK_PROCESS_XML
+    modeler.definitions = processDiagram([])
+    modelerState.saveXml = drawnNodeXml
     act(() => modeler.emit('commandStack.changed', {}))
     expect(await screen.findByRole('textbox', { name: 'Prompt' })).toHaveValue('')
   })

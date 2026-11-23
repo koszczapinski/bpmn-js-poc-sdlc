@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
-import {
-  assertImportableFlowchart,
-  isBlankProcessDocument,
-  parseBpmnXml,
-} from '../adapters/parseBpmnXml'
+import { assertImportableFlowchart, parseBpmnXml } from '../adapters/parseBpmnXml'
 import {
   createBpmnEditor,
   type BpmnEditor,
@@ -41,7 +37,7 @@ export interface InvoiceDiagram {
   focusMessage: UiText | null
   actionError: UiText | null
   isSimulation: boolean
-  /** The saved document is one process with no flow nodes and no sequence flows. */
+  /** The open diagram is one process with no flow nodes and no sequence flows. */
   isBlank: boolean
   promptDraft: string
   setPromptDraft: (value: string) => void
@@ -85,20 +81,12 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
   const [isSimulation, setIsSimulation] = useState<boolean>(false)
   const [isBlank, setIsBlank] = useState(false)
   const [promptDraft, setPromptDraft] = useState('')
-  const blankRequest = useRef(0)
   const refreshBlankRef = useRef<() => void>(() => {})
 
-  const refreshBlankness = useCallback(async (): Promise<void> => {
+  const refreshBlankness = useCallback(() => {
     const editor = editorRef.current
     if (!editor) return
-    const request = ++blankRequest.current
-    try {
-      const xml = await editor.saveXml()
-      if (editorRef.current !== editor || request !== blankRequest.current) return
-      setIsBlank(isBlankProcessDocument(xml))
-    } catch {
-      // A failed read is not a new diagram.
-    }
+    setIsBlank(editor.isBlank())
   }, [])
 
   useEffect(() => {
@@ -228,8 +216,7 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
       setFocusMessage(null)
       setActionError(null)
       setPromptDraft('')
-      setIsBlank(isBlankProcessDocument(xml))
-      await refreshBlankness()
+      setIsBlank(editor.isBlank())
       return true
     } catch (error) {
       setActionError(errorText(error, 'error.openFileFailed'))
@@ -240,28 +227,27 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
   }
 
   async function openFile(file: File): Promise<void> {
-    const editor = editorRef.current
-    if (!editor) {
+    if (!editorRef.current) {
       setActionError({ key: 'error.modelerNotReady' })
       return
     }
 
-    setPromptDraft('')
+    let xml: string
     try {
-      await replaceDiagram(await file.text())
+      xml = await file.text()
     } catch (error) {
       setActionError(errorText(error, 'error.openFileFailed'))
-      setHistory(editor.history())
+      return
     }
+
+    await replaceDiagram(xml)
   }
 
   async function newDiagram(): Promise<void> {
-    setPromptDraft('')
     await replaceDiagram(BLANK_PROCESS_XML)
   }
 
   async function openInvoiceSample(): Promise<void> {
-    setPromptDraft('')
     await replaceDiagram(INVOICE_APPROVAL_XML)
   }
 
