@@ -10,7 +10,27 @@ _Avoid_: Schema, process definition
 
 **Model**:
 The in-memory semantic BPMN 2.0 object graph representing the business process.
-_Avoid_: State, diagram
+_Avoid_: State, diagram, language model
+
+**Language model**:
+The author of one flowchart from a prompt. Distinct from the process Model.
+_Avoid_: Model, assistant, AI
+
+**Prompt**:
+The written description a person gives to a language model.
+_Avoid_: Command, query, template
+
+**Prepared prompt**:
+A prompt paired with one known flowchart. Any other prompt is not prepared.
+_Avoid_: Template, paraphrase, live generation
+
+**Flowchart**:
+One Model together with its Diagram.
+_Avoid_: Schema, picture, XML document
+
+**Blank process**:
+A process with no flow nodes and no sequence flows.
+_Avoid_: Start event, empty file, template
 
 **Structural Finding**:
 A deterministic problem reported by the domain validator indicating an unmet invoice-approval rule.

@@ -65,9 +65,25 @@ function InvoiceApp() {
             type="button"
             variant="outline"
             disabled={!ready}
+            onClick={() => void diagram.newDiagram()}
+          >
+            {t('toolbar.new')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!ready}
             onClick={() => fileInputRef.current?.click()}
           >
             {t('toolbar.open')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!ready}
+            onClick={() => void diagram.openInvoiceSample()}
+          >
+            {t('toolbar.invoiceSample')}
           </Button>
           <Button
             type="button"
@@ -158,6 +174,30 @@ function InvoiceApp() {
       <div className="workspace">
         <section className="canvas-shell relative" aria-label={t('canvas.label')}>
           <div ref={containerRef} className="canvas-host" />
+          {diagram.isBlank && (
+            <form
+              className="prompt-bar"
+              onSubmit={(event) => {
+                event.preventDefault()
+                if (!diagram.promptDraft.trim()) return
+                void diagram.generateDiagram()
+              }}
+            >
+              <label className="prompt-label" htmlFor="diagram-prompt">
+                {t('prompt.label')}
+              </label>
+              <input
+                id="diagram-prompt"
+                className="prompt-input"
+                type="text"
+                value={diagram.promptDraft}
+                onChange={(event) => diagram.setPromptDraft(event.target.value)}
+              />
+              <button type="submit" disabled={!diagram.promptDraft.trim()}>
+                {t('prompt.submit')}
+              </button>
+            </form>
+          )}
           {diagram.phase === 'loading' && (
             <div className="overlay">
               <p>{t('status.loading')}</p>

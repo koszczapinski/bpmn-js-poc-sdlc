@@ -33,47 +33,58 @@ CI does not deploy and does not start a database or browser service.
 
 ## Traceability
 
-| Criterion  | Test                                                          |
-| ---------- | ------------------------------------------------------------- |
-| AC-FLOW-1  | `src/adapters/invoiceApprovalXml.test.ts`                     |
-| AC-FLOW-2  | `src/App.test.tsx`                                            |
-| AC-FLOW-3  | `src/App.test.tsx`                                            |
-| AC-FLOW-4  | `src/App.test.tsx`                                            |
-| AC-FLOW-5  | `src/App.test.tsx`                                            |
-| AC-FLOW-6  | `src/App.test.tsx`                                            |
-| AC-FLOW-7  | `src/App.test.tsx`                                            |
-| AC-STATE-1 | `src/App.test.tsx`                                            |
-| AC-VAL-1   | `src/domain/validateProcess.test.ts`                          |
-| AC-VAL-2   | `src/domain/validateProcess.test.ts`                          |
-| AC-VAL-3   | `src/domain/validateProcess.test.ts`                          |
-| AC-VAL-4   | `src/domain/validateProcess.test.ts`                          |
-| AC-VAL-5   | `src/domain/validateProcess.test.ts`                          |
-| AC-VAL-6   | `src/adapters/invoiceApprovalXml.test.ts`, `src/App.test.tsx` |
-| AC-VAL-7   | `src/App.test.tsx`                                            |
-| AC-VAL-8   | `src/App.test.tsx`                                            |
-| AC-PARSE-1 | `src/adapters/parseBpmnXml.test.ts`                           |
-| AC-PARSE-2 | `src/adapters/parseBpmnXml.test.ts`                           |
-| AC-PARSE-3 | `src/adapters/parseBpmnXml.test.ts`                           |
-| AC-PARSE-4 | `src/adapters/parseBpmnXml.test.ts`                           |
-| AC-PARSE-5 | `src/adapters/parseBpmnXml.test.ts`                           |
-| AC-PARSE-6 | `src/App.test.tsx`                                            |
-| AC-UI-1    | `src/App.test.tsx`                                            |
-| AC-UI-2    | `src/App.test.tsx`                                            |
-| AC-I18N-1  | `src/App.test.tsx`                                            |
-| AC-I18N-2  | `src/App.test.tsx`                                            |
-| AC-I18N-3  | `src/App.test.tsx`                                            |
-| AC-I18N-4  | `src/i18n/messages.test.ts`, `src/i18n/formatFinding.test.ts` |
-| AC-I18N-5  | `src/domain/validateProcess.test.ts`                          |
-| AC-THEME-1 | `src/App.test.tsx`                                            |
-| AC-THEME-2 | `src/App.test.tsx`                                            |
-| AC-THEME-3 | `src/App.test.tsx`                                            |
-| AC-ZEEBE-1 | `src/App.test.tsx`                                            |
-| AC-ZEEBE-2 | `src/adapters/invoiceApprovalXml.test.ts`                     |
-| AC-ZEEBE-3 | `src/App.test.tsx`                                            |
-| AC-SIM-1   | `src/App.test.tsx`                                            |
-| AC-SVG-1   | `src/App.test.tsx`                                            |
-| AC-NAV-1   | `src/App.test.tsx`                                            |
-| AC-LINT-1  | `src/adapters/invoiceApprovalXml.test.ts`                     |
-| AC-ARCH-1  | `src/domain/architecture.test.ts`                             |
+| Criterion   | Test                                                          |
+| ----------- | ------------------------------------------------------------- |
+| AC-FLOW-1   | `src/adapters/invoiceApprovalXml.test.ts`                     |
+| AC-FLOW-2   | `src/App.test.tsx`                                            |
+| AC-FLOW-3   | `src/App.test.tsx`                                            |
+| AC-FLOW-4   | `src/App.test.tsx`                                            |
+| AC-FLOW-5   | `src/App.test.tsx`                                            |
+| AC-FLOW-6   | `src/App.test.tsx`                                            |
+| AC-FLOW-7   | `src/App.test.tsx`                                            |
+| AC-FLOW-8   | `src/App.test.tsx`                                            |
+| AC-FLOW-9   | `src/App.test.tsx`                                            |
+| AC-PROMPT-1 | `src/App.test.tsx`                                            |
+| AC-PROMPT-2 | `src/App.test.tsx`                                            |
+| AC-PROMPT-3 | `src/App.test.tsx`                                            |
+| AC-PROMPT-4 | `src/App.test.tsx`                                            |
+| AC-PROMPT-5 | `src/App.test.tsx`                                            |
+| AC-PROMPT-6 | `src/App.test.tsx`                                            |
+| AC-PROMPT-7 | `src/App.test.tsx`                                            |
+| AC-PROMPT-8 | `src/App.test.tsx`                                            |
+| AC-STATE-1  | `src/App.test.tsx`                                            |
+| AC-VAL-1    | `src/domain/validateProcess.test.ts`                          |
+| AC-VAL-2    | `src/domain/validateProcess.test.ts`                          |
+| AC-VAL-3    | `src/domain/validateProcess.test.ts`                          |
+| AC-VAL-4    | `src/domain/validateProcess.test.ts`                          |
+| AC-VAL-5    | `src/domain/validateProcess.test.ts`                          |
+| AC-VAL-6    | `src/adapters/invoiceApprovalXml.test.ts`, `src/App.test.tsx` |
+| AC-VAL-7    | `src/App.test.tsx`                                            |
+| AC-VAL-8    | `src/App.test.tsx`                                            |
+| AC-VAL-9    | `src/App.test.tsx`                                            |
+| AC-PARSE-1  | `src/adapters/parseBpmnXml.test.ts`                           |
+| AC-PARSE-2  | `src/adapters/parseBpmnXml.test.ts`                           |
+| AC-PARSE-3  | `src/adapters/parseBpmnXml.test.ts`                           |
+| AC-PARSE-4  | `src/adapters/parseBpmnXml.test.ts`                           |
+| AC-PARSE-5  | `src/adapters/parseBpmnXml.test.ts`                           |
+| AC-PARSE-6  | `src/App.test.tsx`                                            |
+| AC-UI-1     | `src/App.test.tsx`                                            |
+| AC-UI-2     | `src/App.test.tsx`                                            |
+| AC-I18N-1   | `src/App.test.tsx`                                            |
+| AC-I18N-2   | `src/App.test.tsx`                                            |
+| AC-I18N-3   | `src/App.test.tsx`                                            |
+| AC-I18N-4   | `src/i18n/messages.test.ts`, `src/i18n/formatFinding.test.ts` |
+| AC-I18N-5   | `src/domain/validateProcess.test.ts`                          |
+| AC-THEME-1  | `src/App.test.tsx`                                            |
+| AC-THEME-2  | `src/App.test.tsx`                                            |
+| AC-THEME-3  | `src/App.test.tsx`                                            |
+| AC-ZEEBE-1  | `src/App.test.tsx`                                            |
+| AC-ZEEBE-2  | `src/adapters/invoiceApprovalXml.test.ts`                     |
+| AC-ZEEBE-3  | `src/App.test.tsx`                                            |
+| AC-SIM-1    | `src/App.test.tsx`                                            |
+| AC-SVG-1    | `src/App.test.tsx`                                            |
+| AC-NAV-1    | `src/App.test.tsx`                                            |
+| AC-LINT-1   | `src/adapters/invoiceApprovalXml.test.ts`                     |
+| AC-ARCH-1   | `src/domain/architecture.test.ts`                             |
 
 Every row above is an automated test. None of them are marked planned.

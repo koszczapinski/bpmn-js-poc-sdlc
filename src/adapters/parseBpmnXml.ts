@@ -112,3 +112,68 @@ function optionalName(value: string | null): string | undefined {
   const trimmed = value?.trim()
   return trimmed ? trimmed : undefined
 }
+
+/**
+ * Refuses a flowchart the prepared prompt must not import: not exactly one
+ * process, a flow node without a shape, or a sequence flow without an edge.
+ * Nodes and flows nested in a subprocess count.
+ */
+export function assertImportableFlowchart(xml: string): void {
+  const document = parseDocument(xml)
+  const processes = localElements(document, 'process')
+  if (processes.length === 0) {
+    throw new BpmnParseError('The document does not contain a BPMN process.')
+  }
+  if (processes.length !== 1) {
+    throw new BpmnParseError('The document contains more than one BPMN process.')
+  }
+  const process = processes[0]
+  if (!process) throw new BpmnParseError('The document does not contain a BPMN process.')
+
+  const flowNodeIds: string[] = []
+  const flowIds: string[] = []
+  collectFlowchartElements(process, flowNodeIds, flowIds)
+
+  const shapes = new Set(diagramElementIds(document, 'BPMNShape'))
+  const edges = new Set(diagramElementIds(document, 'BPMNEdge'))
+  for (const id of flowNodeIds) {
+    if (!shapes.has(id)) throw new BpmnParseError(`Flow node "${id}" has no BPMN shape.`)
+  }
+  for (const id of flowIds) {
+    if (!edges.has(id)) throw new BpmnParseError(`Sequence flow "${id}" has no BPMN edge.`)
+  }
+}
+
+function collectFlowchartElements(
+  element: Element,
+  flowNodeIds: string[],
+  flowIds: string[],
+): void {
+  for (const child of Array.from(element.children)) {
+    const localName = child.localName
+    if (localName === 'sequenceFlow') {
+      const id = child.getAttribute('id')?.trim()
+      if (!id) throw new BpmnParseError('A sequence flow is missing an id.')
+      flowIds.push(id)
+      continue
+    }
+    if (isFlowNodeType(localName)) {
+      const id = child.getAttribute('id')?.trim()
+      if (!id) throw new BpmnParseError(`A ${localName} element is missing an id.`)
+      flowNodeIds.push(id)
+    }
+    collectFlowchartElements(child, flowNodeIds, flowIds)
+  }
+}
+
+function localElements(root: Document | Element, localName: string): Element[] {
+  return Array.from(root.getElementsByTagName('*')).filter(
+    (element) => element.localName === localName,
+  )
+}
+
+function diagramElementIds(document: Document, localName: string): string[] {
+  return localElements(document, localName)
+    .map((element) => element.getAttribute('bpmnElement')?.trim() ?? '')
+    .filter((id) => id !== '')
+}
