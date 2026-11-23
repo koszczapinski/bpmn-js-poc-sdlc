@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
-import { parseBpmnXml } from '../adapters/parseBpmnXml'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
+import {
+  assertImportableFlowchart,
+  isBlankProcessDocument,
+  parseBpmnXml,
+} from '../adapters/parseBpmnXml'
 import {
   createBpmnEditor,
   type BpmnEditor,
@@ -7,7 +11,12 @@ import {
   type SelectedElement,
 } from '../adapters/bpmnEditor'
 import { downloadTextFile } from '../adapters/downloadTextFile'
-import { BLANK_PROCESS_XML, INVOICE_APPROVAL_XML, INVOICE_DOWNLOAD_NAME } from '../bpmn/sample'
+import {
+  BLANK_PROCESS_XML,
+  INVOICE_APPROVAL_XML,
+  INVOICE_DOWNLOAD_NAME,
+  xmlForPreparedPrompt,
+} from '../bpmn/sample'
 import { validateProcess } from '../domain/validateProcess'
 import type { Finding } from '../domain/types'
 import type { MessageKey } from '../i18n/messages'
@@ -32,6 +41,11 @@ export interface InvoiceDiagram {
   focusMessage: UiText | null
   actionError: UiText | null
   isSimulation: boolean
+  /** The saved document is one process with no flow nodes and no sequence flows. */
+  isBlank: boolean
+  promptDraft: string
+  setPromptDraft: (value: string) => void
+  generateDiagram: () => Promise<void>
   validate: () => Promise<void>
   download: () => Promise<void>
   downloadSvg: () => Promise<void>
@@ -69,6 +83,29 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
   const [focusMessage, setFocusMessage] = useState<UiText | null>(null)
   const [actionError, setActionError] = useState<UiText | null>(null)
   const [isSimulation, setIsSimulation] = useState<boolean>(false)
+  const [isBlank, setIsBlank] = useState(false)
+  const [promptDraft, setPromptDraft] = useState('')
+  const blankRequest = useRef(0)
+  const refreshBlankRef = useRef<() => void>(() => {})
+
+  const refreshBlankness = useCallback(async (): Promise<void> => {
+    const editor = editorRef.current
+    if (!editor) return
+    const request = ++blankRequest.current
+    try {
+      const xml = await editor.saveXml()
+      if (editorRef.current !== editor || request !== blankRequest.current) return
+      setIsBlank(isBlankProcessDocument(xml))
+    } catch {
+      // A failed read is not a new diagram.
+    }
+  }, [])
+
+  useEffect(() => {
+    refreshBlankRef.current = () => {
+      void refreshBlankness()
+    }
+  }, [refreshBlankness])
 
   useEffect(() => {
     const container = containerRef.current
@@ -87,6 +124,7 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
       )
       setActiveFindingId(null)
       setFocusMessage(null)
+      refreshBlankRef.current()
     })
     let cancelled = false
     const observer =
@@ -101,6 +139,7 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
         setHistory(editor.history())
         setPhase('ready')
         editor.fit()
+        refreshBlankRef.current()
       })
       .catch((error: unknown) => {
         if (cancelled) return
@@ -172,11 +211,11 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     }
   }
 
-  async function replaceDiagram(xml: string): Promise<void> {
+  async function replaceDiagram(xml: string): Promise<boolean> {
     const editor = editorRef.current
     if (!editor) {
       setActionError({ key: 'error.modelerNotReady' })
-      return
+      return false
     }
 
     try {
@@ -188,8 +227,13 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
       setActiveFindingId(null)
       setFocusMessage(null)
       setActionError(null)
+      setPromptDraft('')
+      setIsBlank(isBlankProcessDocument(xml))
+      await refreshBlankness()
+      return true
     } catch (error) {
       setActionError(errorText(error, 'error.openFileFailed'))
+      return false
     } finally {
       setHistory(editor.history())
     }
@@ -202,6 +246,7 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
       return
     }
 
+    setPromptDraft('')
     try {
       await replaceDiagram(await file.text())
     } catch (error) {
@@ -210,12 +255,30 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     }
   }
 
-  function newDiagram(): Promise<void> {
-    return replaceDiagram(BLANK_PROCESS_XML)
+  async function newDiagram(): Promise<void> {
+    setPromptDraft('')
+    await replaceDiagram(BLANK_PROCESS_XML)
   }
 
-  function openInvoiceSample(): Promise<void> {
-    return replaceDiagram(INVOICE_APPROVAL_XML)
+  async function openInvoiceSample(): Promise<void> {
+    setPromptDraft('')
+    await replaceDiagram(INVOICE_APPROVAL_XML)
+  }
+
+  async function generateDiagram(): Promise<void> {
+    if (promptDraft.trim() === '') return
+    const xml = xmlForPreparedPrompt(promptDraft)
+    if (!xml) {
+      setActionError({ key: 'error.noLiveLanguageModel' })
+      return
+    }
+    try {
+      assertImportableFlowchart(xml)
+    } catch (error) {
+      setActionError(errorText(error, 'error.openFileFailed'))
+      return
+    }
+    await replaceDiagram(xml)
   }
 
   function fit(): void {
@@ -277,6 +340,10 @@ export function useInvoiceDiagram(containerRef: RefObject<HTMLDivElement | null>
     focusMessage,
     actionError,
     isSimulation,
+    isBlank,
+    promptDraft,
+    setPromptDraft,
+    generateDiagram,
     validate,
     download,
     downloadSvg,

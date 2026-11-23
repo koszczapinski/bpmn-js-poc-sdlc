@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_LegalDocuments" targetNamespace="http://example.com/legal-documents">
+  <bpmn:process id="Process_LegalDocuments" name="Obieg dokumentów prawnych" isExecutable="false">
+    <bpmn:startEvent id="Start_Legal">
+      <bpmn:outgoing>Flow_ToReceive</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_ReceiveDocument" name="Przyjmij dokument">
+      <bpmn:extensionElements>
+        <zeebe:formDefinition formId="receive-legal-document" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToReceive</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToReview</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_ReviewDocument" name="Zweryfikuj dokument">
+      <bpmn:extensionElements>
+        <zeebe:formDefinition formId="review-legal-document" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToReview</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToGateway</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Accepted" name="Przyjęty?" default="Flow_Accepted">
+      <bpmn:incoming>Flow_ToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Accepted</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Rejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_FileDocument" name="Złóż do akt">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="file-legal-document" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Accepted</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToFiled</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Filed" name="Złożony">
+      <bpmn:incoming>Flow_ToFiled</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="Task_ReturnToAuthor" name="Zwróć autorowi">
+      <bpmn:extensionElements>
+        <zeebe:formDefinition formId="return-legal-document" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Rejected</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToReturned</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_Returned" name="Zwrócony">
+      <bpmn:incoming>Flow_ToReturned</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_ToReceive" sourceRef="Start_Legal" targetRef="Task_ReceiveDocument" />
+    <bpmn:sequenceFlow id="Flow_ToReview" sourceRef="Task_ReceiveDocument" targetRef="Task_ReviewDocument" />
+    <bpmn:sequenceFlow id="Flow_ToGateway" sourceRef="Task_ReviewDocument" targetRef="Gateway_Accepted" />
+    <bpmn:sequenceFlow id="Flow_Accepted" name="Tak" sourceRef="Gateway_Accepted" targetRef="Task_FileDocument" />
+    <bpmn:sequenceFlow id="Flow_ToFiled" sourceRef="Task_FileDocument" targetRef="End_Filed" />
+    <bpmn:sequenceFlow id="Flow_Rejected" name="Nie" sourceRef="Gateway_Accepted" targetRef="Task_ReturnToAuthor" />
+    <bpmn:sequenceFlow id="Flow_ToReturned" sourceRef="Task_ReturnToAuthor" targetRef="End_Returned" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_LegalDocuments">
+    <bpmndi:BPMNPlane id="BPMNPlane_LegalDocuments" bpmnElement="Process_LegalDocuments">
+      <bpmndi:BPMNShape id="Start_Legal_di" bpmnElement="Start_Legal">
+        <dc:Bounds x="160" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReceiveDocument_di" bpmnElement="Task_ReceiveDocument">
+        <dc:Bounds x="250" y="160" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewDocument_di" bpmnElement="Task_ReviewDocument">
+        <dc:Bounds x="480" y="160" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Accepted_di" bpmnElement="Gateway_Accepted" isMarkerVisible="true">
+        <dc:Bounds x="710" y="175" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_FileDocument_di" bpmnElement="Task_FileDocument">
+        <dc:Bounds x="840" y="60" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Filed_di" bpmnElement="End_Filed">
+        <dc:Bounds x="1080" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReturnToAuthor_di" bpmnElement="Task_ReturnToAuthor">
+        <dc:Bounds x="840" y="280" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Returned_di" bpmnElement="End_Returned">
+        <dc:Bounds x="1080" y="302" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_ToReceive_di" bpmnElement="Flow_ToReceive">
+        <di:waypoint x="196" y="200" />
+        <di:waypoint x="250" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToReview_di" bpmnElement="Flow_ToReview">
+        <di:waypoint x="430" y="200" />
+        <di:waypoint x="480" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToGateway_di" bpmnElement="Flow_ToGateway">
+        <di:waypoint x="660" y="200" />
+        <di:waypoint x="710" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Accepted_di" bpmnElement="Flow_Accepted">
+        <di:waypoint x="735" y="175" />
+        <di:waypoint x="735" y="100" />
+        <di:waypoint x="840" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToFiled_di" bpmnElement="Flow_ToFiled">
+        <di:waypoint x="1020" y="100" />
+        <di:waypoint x="1080" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Rejected_di" bpmnElement="Flow_Rejected">
+        <di:waypoint x="735" y="225" />
+        <di:waypoint x="735" y="320" />
+        <di:waypoint x="840" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToReturned_di" bpmnElement="Flow_ToReturned">
+        <di:waypoint x="1020" y="320" />
+        <di:waypoint x="1080" y="320" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
