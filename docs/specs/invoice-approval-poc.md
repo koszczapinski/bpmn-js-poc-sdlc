@@ -129,7 +129,7 @@ The interface is built from shadcn/ui components and has two themes: light (defa
 
 ### Interactive simulation, visual export, and canvas navigation
 
-**AC-SIM-1.** Given the modeler is active, when the user toggles the Simulation button, then `bpmn-js-token-simulation` is toggled on the canvas. When active, interactive execution tokens can be stepped through the invoice approval flow.
+**AC-SIM-1.** Given the modeler is active, when the user toggles the Simulation button, then `bpmn-js-token-simulation` is toggled on the canvas. When active, interactive execution tokens can be stepped through the invoice approval flow. Turning simulation on does not re-import the diagram or change its elements. Given token simulation is on, when Open BPMN successfully imports a file, then simulation ends and the toolbar shows Simulation. Given token simulation is on, when Open BPMN rejects a file, then the diagram that was open stays, the shown check result stays, and the toolbar still shows Stop simulation.
 
 **AC-SVG-1.** Given a diagram is loaded on the canvas, when the user triggers SVG export, then the editor extracts the diagram SVG via `saveSVG()` and triggers a file download named `invoice-approval.svg`.
 

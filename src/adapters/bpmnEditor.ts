@@ -179,6 +179,8 @@ class BpmnJsEditor implements BpmnEditor {
   async importXml(xml: string): Promise<{ warnings: string[] }> {
     const result = await this.modeler.importXML(xml)
     this.publishSelection()
+    // The token-simulation module turns the mode back on at import.done when it was on.
+    if (this.isSimulationActive()) this.toggleSimulation(false)
     return { warnings: (result.warnings ?? []).map(warningText) }
   }
 
@@ -188,6 +190,7 @@ class BpmnJsEditor implements BpmnEditor {
       return await this.importXml(xml)
     } catch (error) {
       try {
+        // Direct import, not importXml: a failed open must not end token simulation.
         await this.modeler.importXML(previous)
       } catch {
         // Report the file's error, not the failed restore.
