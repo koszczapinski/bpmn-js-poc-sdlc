@@ -386,14 +386,53 @@ describe('App', () => {
     const { user, modeler } = await renderReady()
     const simButton = screen.getByRole('button', { name: 'Simulation' })
     expect(simButton).toBeInTheDocument()
+    const xmlBefore = modeler.xml
+    const imports = modeler.importXML.mock.calls.length
 
     await user.click(simButton)
     expect(modeler.toggleMode.toggleMode).toHaveBeenCalledTimes(1)
     expect(await screen.findByRole('button', { name: 'Stop simulation' })).toBeInTheDocument()
+    expect(modeler.xml).toBe(xmlBefore)
+    expect(modeler.importXML).toHaveBeenCalledTimes(imports)
+    expect(modeler.modeling.updateProperties).not.toHaveBeenCalled()
+    expect(modeler.modeling.updateModdleProperties).not.toHaveBeenCalled()
 
     await user.click(screen.getByRole('button', { name: 'Stop simulation' }))
     expect(modeler.toggleMode.toggleMode).toHaveBeenCalledTimes(2)
     expect(await screen.findByRole('button', { name: 'Simulation' })).toBeInTheDocument()
+  })
+
+  it('AC-SIM-1: a successful Open BPMN ends token simulation', async () => {
+    const { user, modeler } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'Simulation' }))
+    expect(await screen.findByRole('button', { name: 'Stop simulation' })).toBeInTheDocument()
+
+    await user.upload(screen.getByLabelText('BPMN file'), bpmnFile(brokenXml, 'mine.bpmn'))
+
+    await waitFor(() => expect(modeler.importXML).toHaveBeenLastCalledWith(brokenXml))
+    expect(modeler.toggleMode._active).toBe(false)
+    expect(screen.getByRole('button', { name: 'Simulation' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Stop simulation' })).not.toBeInTheDocument()
+  })
+
+  it('AC-SIM-1: a rejected Open BPMN leaves token simulation on', async () => {
+    const { user, modeler } = await renderReady()
+    await user.click(screen.getByRole('button', { name: 'Validate' }))
+    expect(await screen.findByText('No structural issues in this subset.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Simulation' }))
+    expect(await screen.findByRole('button', { name: 'Stop simulation' })).toBeInTheDocument()
+    modelerState.importImpl = async (xml) => {
+      if (xml === 'not bpmn') throw new Error('unparsable content')
+      return { warnings: [] }
+    }
+
+    await user.upload(screen.getByLabelText('BPMN file'), bpmnFile('not bpmn', 'bad.bpmn'))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('unparsable content')
+    expect(screen.getByText('No structural issues in this subset.')).toBeInTheDocument()
+    expect(modeler.xml).toContain('Process_InvoiceApproval')
+    expect(modeler.toggleMode._active).toBe(true)
+    expect(screen.getByRole('button', { name: 'Stop simulation' })).toBeInTheDocument()
   })
 
   it('AC-SVG-1: downloads the SVG currently returned by the modeler', async () => {
