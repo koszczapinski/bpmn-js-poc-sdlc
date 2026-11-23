@@ -18,6 +18,8 @@ Delivery flow, labels, and QA gate: `SDLC.md`. Pipeline config: `.ai/agentic.con
 
 Installed skills live under `.agents/skills/` (`om-*`). Prefer naming the skill for the next change (for example `om-brainstorm`, `om-spec-writing`, `om-auto-create-pr`, `om-auto-review-pr`) instead of free-form implementation. Behavior of this demo still goes through `docs/specs/invoice-approval-poc.md` and the local `.claude/skills/spec` + `.claude/skills/tdd` loop when those ACs change.
 
+For Matt Pocock skills, use `/to-spec` to turn a discussion into a spec and `/to-tickets` to split a spec into tickets.
+
 ## Agent skills
 
 ### Issue tracker
